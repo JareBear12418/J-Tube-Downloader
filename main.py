@@ -5,11 +5,11 @@ from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 # pip install youtube-dl / imageio
-import sys, os, getpass, shutil, subprocess, imageio, youtube_dl, qdarkstyle
+import sys, os, getpass, shutil, subprocess, youtube_dl, qdarkstyle
 width = 300
 height = 120
 title = 'J-Tube Downloader'
-version = 'v0.1'
+version = 'v0.2'
 username = getpass.getuser()
 FILEBROWSER_PATH = os.path.join(os.getenv('WINDIR'), 'explorer.exe')
 fileLoc = 0
@@ -93,7 +93,6 @@ class main(QMainWindow):
                 }
             else:
                 ydl_opts = {
-                    'format': 'bestaudio/best'
                 }
             info_dict = youtube_dl.YoutubeDL(ydl_opts).extract_info(url, download = False)
             video_id = info_dict.get("id", None)
