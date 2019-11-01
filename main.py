@@ -9,7 +9,7 @@ import sys, os, getpass, shutil, subprocess, youtube_dl, qdarkstyle
 width = 300
 height = 120
 title = 'J-Tube Downloader'
-version = 'v0.2'
+version = 'v0.3'
 username = getpass.getuser()
 FILEBROWSER_PATH = os.path.join(os.getenv('WINDIR'), 'explorer.exe')
 fileLoc = 0
@@ -75,59 +75,67 @@ class main(QMainWindow):
         # BUTTON END
     def downloadYoutube(self):
         self.changeText()
-        try:
-            self.lblState.setText('Downloading...')
-            directory = 'C:/Users/{}/Videos/J-Tube Downloads'.format(username)
-            if not os.path.exists(directory):
-                os.makedirs(directory)
-                
-            url = self.txtURL.text()
-            if 'https://www.youtube.com/watch?' not in url:
-                buttonReply = QMessageBox.critical(self, 'Error! :(', "{} is an invalid URL".format(url), QMessageBox.Ok, QMessageBox.Ok)
-                return
-            if self.radAudio.isChecked() == True:
-                ydl_opts = {
-                    'format': 'bestaudio/best',
-                    'extractaudio': True,
-                    'audioformat': "mp3"
-                }
-            else:
-                ydl_opts = {
-                }
-            info_dict = youtube_dl.YoutubeDL(ydl_opts).extract_info(url, download = False)
-            video_id = info_dict.get("id", None)
-            video_title = info_dict.get('title', None)
-            self.lblTitle.setText(str(video_title))
+        # try:
+        self.lblState.setText('Downloading...')
+        directory = 'C:/Users/{}/Videos/J-Tube Downloads'.format(username)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
             
-            try:
-                with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-                    self.lblState.setText('Downloading...')
-                    ydl.download([url])
-            except:
-                buttonReply = QMessageBox.critical(self, 'Error! :(', "Problem downloading {}".format(url), QMessageBox.Ok, QMessageBox.Ok)
-                return
-            f = os.listdir(os.getcwd())
-            t = video_title + '-' + video_id
-            for i, j in enumerate(f):
-                # print(j, i)
-                if t in j:
-                    print(j)
-                    global fileLoc
-                    fileLoc = f[i]
-                    print(fileLoc)
-                    
-            extension = os.path.splitext(fileLoc)[1]
-            shutil.move(video_title + '-' + video_id + extension, directory + '/' + video_title + extension)
-            self.lblState.setText('Finished!')
-            buttonReply = QMessageBox.information(self, 'Success! :)', "Succesfully downloaded!\nDo you want to open the file directory?", QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
-            if buttonReply == QMessageBox.Yes:
-                self.explore(directory)
-            self.lblState.setText('')
+        url = self.txtURL.text()
+        if 'https://www.youtube.com/watch?' not in url:
+            buttonReply = QMessageBox.critical(self, 'Error! :(', "{} is an invalid URL".format(url), QMessageBox.Ok, QMessageBox.Ok)
+            return
+        # if 'https://youtu.be/' not in url:
+        #     buttonReply = QMessageBox.critical(self, 'Error! :(', "{} is an invalid URL".format(url), QMessageBox.Ok, QMessageBox.Ok)
+        #     return
+        if self.radAudio.isChecked() == True:
+            ydl_opts = {
+                'format': 'bestaudio/best',
+                'extractaudio': True,
+                'audioformat': "mp3",
+                'noplaylist': True,
+                # 'outtmpl': directory
+            }
+        else:
+            ydl_opts = {
+                'noplaylist': True,
+                # 'outtmpl': directory
+            }
+        info_dict = youtube_dl.YoutubeDL(ydl_opts).extract_info(url, download = False)
+        video_id = info_dict.get("id", None)
+        video_title = info_dict.get('title', None)
+        self.lblTitle.setText(str(video_title))
+        
+        try:
+            with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+                self.lblState.setText('Downloading...')
+                ydl.download([url])
         except Exception as e:
             self.lblState.setText('')
-            self.lblTitle.setText("")
-            buttonReply = QMessageBox.critical(self, 'Error! :(', "{}".format(e), QMessageBox.Ok, QMessageBox.Ok)
+            buttonReply = QMessageBox.critical(self, 'Error! :(', "Problem downloading {}\n\nError Log:\n{}".format(url, e), QMessageBox.Ok, QMessageBox.Ok)
             return
+        f = os.listdir(os.getcwd())
+        t = video_title + '-' + video_id
+        for i, j in enumerate(f):
+            # print(j, i)
+            if t in j:
+                print(j)
+                global fileLoc
+                fileLoc = f[i]
+                print(fileLoc)
+                
+        extension = os.path.splitext(fileLoc)[1]
+        shutil.move(video_title + '-' + video_id + extension, directory + '/' + video_title + extension)
+        self.lblState.setText('Finished!')
+        buttonReply = QMessageBox.information(self, 'Success! :)', "Succesfully downloaded!\nDo you want to open the file directory?", QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+        if buttonReply == QMessageBox.Yes:
+            self.explore(directory)
+        self.lblState.setText('')
+        # except Exception as e:
+        #     self.lblState.setText('')
+        #     self.lblTitle.setText("")
+        #     buttonReply = QMessageBox.critical(self, 'Error! :(', "{}".format(e), QMessageBox.Ok, QMessageBox.Ok)
+        #     return
     def changeText(self):
         self.lblState.setText('Downloading...')
     def explore(self, path):
