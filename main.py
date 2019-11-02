@@ -1,33 +1,57 @@
 # pip install pyqt5
-from PyQt5.QtCore import QDir, Qt, QUrl, QPoint
+from PyQt5.QtCore import QDir, Qt, QUrl, QPoint, pyqtSlot
 from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
 from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 # pip install youtube-dl / imageio
-import sys, os, getpass, shutil, subprocess, youtube_dl
+import sys, os, getpass, shutil, subprocess, youtube_dl, ffmpeg
 width = 300
-height = 150
-title = 'J-Tube Downloader'
+height = 170
+title = ' J-Tube Downloader'
 version = 'v0.4'
 username = getpass.getuser()
 FILEBROWSER_PATH = os.path.join(os.getenv('WINDIR'), 'explorer.exe')
 fileLoc = 0
 dl_percentage = 0
+btn_size = 25
 class main(QWidget):
     def __init__(self, name):
         super().__init__()
         self.setFixedSize(width,height)
-        self.setWindowTitle(title + ' ' + version)
-        self.layout  = QVBoxLayout()
-        self.layout.addWidget(MyBar(self))
-        self.setLayout(self.layout)
-        self.layout.setContentsMargins(0,0,0,0)
-        self.layout.addStretch(-1)
-        # self.setMinimumSize(800,400)
+        self.menuBarTitle = QLabel(self)
+        self.menuBarTitle.setText(title + ' ' + version)
+        self.menuBarTitle.resize(width, btn_size + 1)
+        self.menuBarTitle.setFont(QFont('Calibri', 10))
+        self.menuBarTitle.setStyleSheet("""
+                                        background-color: #222222;
+                                        color: #144a85;""")
+
+        self.btn_close = HoverButtonExit(self)
+        self.btn_close.clicked.connect(self.btn_close_clicked)
+        self.btn_close.resize(btn_size + 10,btn_size)
+        self.btn_close.setStyleSheet("""background-color: #8b0000;
+                                    border-radius: 3px; 
+                                    border-style: none;
+                                    border: 1px solid black;""")
+        self.btn_close.move(width - (btn_size + 10),0)
+        self.btn_close.setFont(QFont('Calibri', 15))
+        self.btn_close.setText('X')
+
+        self.btn_min = HoverButtonMinimize(self)
+        self.btn_min.clicked.connect(self.btn_min_clicked)
+        self.btn_min.resize(btn_size + 10, btn_size)
+        self.btn_min.setStyleSheet("""background-color: #444444;
+                                   border-radius: 3px;
+                                   border-style: none; 
+                                   border: 1px solid black;""")
+        self.btn_min.move(width - (btn_size + btn_size + 20),0)
+        self.btn_min.setFont(QFont('Calibri', 20))
+        self.btn_min.setText('-')
+        
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.pressing = False
-        # app.setStyle("Windows Vista")
+        app.setStyle("Windows Vista")
         palette = QPalette()
         palette.setColor(QPalette.Window, QColor(53, 53, 53))
         palette.setColor(QPalette.WindowText, Qt.black)
@@ -37,7 +61,7 @@ class main(QWidget):
         palette.setColor(QPalette.ToolTipText, Qt.white)
         palette.setColor(QPalette.Text, Qt.black)
         palette.setColor(QPalette.Button, QColor(53, 53, 53))
-        palette.setColor(QPalette.ButtonText, Qt.black)
+        palette.setColor(QPalette.ButtonText, Qt.white)
         palette.setColor(QPalette.BrightText, Qt.red)
         palette.setColor(QPalette.Link, QColor(42, 130, 218))
         palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
@@ -48,45 +72,77 @@ class main(QWidget):
         # RADIO BUTTON START
         self.radAudio = QRadioButton(self)
         self.radAudio.setText('Audio')
-        self.radAudio.move(10,80)
+        self.radAudio.move(10,100)
         # RADIO BUTTON END
         # TEXT BOX START
         self.txtURL = QLineEdit(self)
-        self.txtURL.move(40,40)
+        self.txtURL.move(40,60)
         self.txtURL.resize(width - 50,30)
         self.txtURL.setToolTip('Paste your YouTube link here.')
+        self.txtURL.setStyleSheet("""
+                                background-color :#292929;
+                                color: #144a85;
+                                border-radius: 3px;
+                                border-style: none; 
+                                border: 1px solid black;
+                                """)
         # TEXT BOX END
         # LABEL START
         self.lblTitle = QLabel(self)
-        self.lblTitle.move(10,0)
+        self.lblTitle.move(10,30)
         self.lblTitle.resize(280,20)
         self.lblTitle.setText("")
         
         
         self.lblURL = QLabel(self)
-        self.lblURL.move(10,43)
+        self.lblURL.move(10,63)
         self.lblURL.resize(30,20)
         self.lblURL.setText("URL: ")
         
         # PROGRESS BAR START
         self.progress = QProgressBar(self)
-        self.progress.setGeometry(10, 115, 280, 30)
+        self.progress.setGeometry(10, 135, 280, 30)
         self.progress.setValue(0)
         self.progress.hide()
         # PROGRESs BAR END
         
         self.lblState = QLabel(self)
-        self.lblState.move(20,115)
+        self.lblState.move(20,135)
         self.lblState.resize(280, 30)
         self.lblState.setText("")
         # LABEL END
         # BUTTON START
-        self.btnDownload = QPushButton(self)
+        self.btnDownload = DownloadButton(self)
         self.btnDownload.setText('Download')
-        self.btnDownload.move(width / 3,80)
+        self.btnDownload.move(width / 3,100)
+        self.btnDownload.resize(80,30)
         self.btnDownload.clicked.connect(self.downloadYoutube)
+        self.btnDownload.setFont(QFont('Calibri', 10))
+        self.btnDownload.setStyleSheet("""background-color: #39873b; 
+                                       border-radius: 3px; 
+                                       border-style: none;
+                                       border: 1px solid black;""")
         
+        self.center()
+        self.oldPos = self.pos()
+        
+        # MOVE WINDOW START
+    #center
+    def center(self):
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
         # BUTTON END
+    def mousePressEvent(self, event):
+        self.oldPos = event.globalPos()
+
+    def mouseMoveEvent(self, event):
+        delta = QPoint (event.globalPos() - self.oldPos)
+        #print(delta)
+        self.move(self.x() + delta.x(), self.y() + delta.y())
+        self.oldPos = event.globalPos()
+        # MOVE WINDOW END
     def downloadYoutube(self):
         try:
             self.progress.show()
@@ -95,17 +151,25 @@ class main(QWidget):
                 os.makedirs(directory)
                 
             url = self.txtURL.text()
-            if 'https://www.youtube.com/watch?' not in url:
-                buttonReply = QMessageBox.critical(self, 'Error! :(', "{} is an invalid URL".format(url), QMessageBox.Ok, QMessageBox.Ok)
-                return
+            # if 'https://www.youtube.com/watch?' not in url:
+            #     buttonReply = QMessageBox.critical(self, 'Error! :(', "{} is an invalid URL".format(url), QMessageBox.Ok, QMessageBox.Ok)
+            #     return
             # if 'https://youtu.be/' not in url:
             #     buttonReply = QMessageBox.critical(self, 'Error! :(', "{} is an invalid URL".format(url), QMessageBox.Ok, QMessageBox.Ok)
             #     return
             if self.radAudio.isChecked() == True:
                 ydl_opts = {
                     'format': 'bestaudio/best',
-                    'extractaudio': True,
-                    'audioformat': "mp3",
+                    'postprocessors': [{
+                        'key': 'FFmpegExtractAudio',
+                        'preferredcodec': 'mp3',
+                        'preferredquality': '192',
+                    }],
+                    'postprocessor_args': [
+                        '-ar', '16000'
+                    ],
+                    'prefer_ffmpeg': True,
+                    'keepvideo': False,
                     'progress_hooks': [self.my_hook],
                     'noplaylist': True,
                     # 'outtmpl': directory
@@ -125,9 +189,12 @@ class main(QWidget):
                     self.progress.show()
                     ydl.download([url])
             except Exception as e:
-                self.lblState.setText('')
                 buttonReply = QMessageBox.critical(self, 'Error! :(', "Problem downloading {}\n\nError Log:\n{}".format(url, e), QMessageBox.Ok, QMessageBox.Ok)
                 return
+                self.explore(directory)
+                self.lblState.setText('')
+                self.lblTitle.setText('')
+                self.progress.setValue(0)
             # This code below gets the file that has been downloaded
             # FIXME improve this to make it more readable and cleaner
             f = os.listdir(os.getcwd())
@@ -151,10 +218,13 @@ class main(QWidget):
             self.progress.setValue(0)
             self.progress.hide()
         except Exception as e:
-            self.lblState.setText('')
-            self.lblTitle.setText("")
             buttonReply = QMessageBox.critical(self, 'Error! :(', "{}".format(e), QMessageBox.Ok, QMessageBox.Ok)
             return
+            self.explore(directory)
+            self.lblState.setText('')
+            self.lblTitle.setText('')
+            self.progress.setValue(0)
+    @pyqtSlot(int)
     def my_hook(self, d):
         self.progress.show()
         if d['status'] == 'finished':
@@ -175,80 +245,51 @@ class main(QWidget):
             subprocess.run([FILEBROWSER_PATH, path])
         elif os.path.isfile(path):
             subprocess.run([FILEBROWSER_PATH, '/select,', os.path.normpath(path)])
-
-class MyBar(QWidget):
-    def __init__(self, parent):
-        super(MyBar, self).__init__()
-        self.parent = parent
-        self.layout = QHBoxLayout()
-        self.layout.setContentsMargins(0,0,0,0)
-        self.title = QLabel(title + ' ' + version)
-
-        btn_size = 22
-
-        self.btn_close = QPushButton("x")
-        self.btn_close.clicked.connect(self.btn_close_clicked)
-        self.btn_close.setFixedSize(btn_size + 5,btn_size)
-        self.btn_close.setStyleSheet("""background-color: #8b0000; 
-                                        border-radius: 3px; 
-                                        border-style: none; 
-                                        font-weight: bold;""")
-
-        self.btn_min = QPushButton("-")
-        self.btn_min.clicked.connect(self.btn_min_clicked)
-        self.btn_min.setFixedSize(btn_size + 5, btn_size)
-        self.btn_min.setStyleSheet("""background-color: #444444; 
-                                    border-radius: 3px;
-                                    border-style: none; 
-                                    font-weight: bold;""")
-        
-        self.title.setFixedHeight(25)
-        self.title.setAlignment(Qt.AlignCenter)
-        self.layout.addWidget(self.title)
-        self.layout.addWidget(self.btn_min)
-        self.layout.addWidget(self.btn_close)
-
-        self.title.setStyleSheet("""
-            background-color: #222222;
-            color: cyan;
-        """)
-        self.setLayout(self.layout)
-
-        self.start = QPoint(0, 0)
-        self.pressing = False
-
-    def resizeEvent(self, QResizeEvent):
-        super(MyBar, self).resizeEvent(QResizeEvent)
-        self.title.setFixedWidth(self.parent.width())
-
-    def mousePressEvent(self, event):
-        self.start = self.mapToGlobal(event.pos())
-        self.pressing = True
-
-    def mouseMoveEvent(self, event):
-        if self.pressing:
-            self.end = self.mapToGlobal(event.pos())
-            self.movement = self.end-self.start
-            self.parent.setGeometry(self.mapToGlobal(self.movement).x(),
-                                self.mapToGlobal(self.movement).y(),
-                                self.parent.width(),
-                                self.parent.height())
-            self.start = self.end
-
-    def mouseReleaseEvent(self, QMouseEvent):
-        self.pressing = False
-
+    
 
     def btn_close_clicked(self):
-        self.parent.close()
+        self.close()
 
     def btn_min_clicked(self):
-        self.parent.showMinimized()
+        self.showMinimized()
 
+class HoverButtonExit(QToolButton):
+    def __init__(self, parent=None):
+        super(HoverButtonExit, self).__init__(parent)
+        self.setMouseTracking(True)
+
+    def enterEvent(self,event):
+        self.setStyleSheet("background-color: #9f0000; border-radius: 3px; border-style: none;  font-weight: bold;  border: 1.4px solid black;")
+
+    def leaveEvent(self,event):
+        self.setStyleSheet("background-color: #8b0000; border-radius: 3px; border-style: none; border: 1px solid black;")
+        
+class HoverButtonMinimize(QToolButton):
+    def __init__(self, parent=None):
+        super(HoverButtonMinimize, self).__init__(parent)
+        self.setMouseTracking(True)
+
+    def enterEvent(self,event):
+        self.setStyleSheet("background-color: #565656; border-radius: 3px; border-style: none;  font-weight: bold;  border: 1.4px solid black; ")
+
+    def leaveEvent(self,event):
+        self.setStyleSheet("background-color: #444444; border-radius: 3px; border-style: none; border: 1px solid black;")
+        
+class DownloadButton(QToolButton):
+    def __init__(self, parent=None):
+        super(DownloadButton, self).__init__(parent)
+        self.setMouseTracking(True)
+
+    def enterEvent(self,event):
+        self.setStyleSheet("background-color: #099109; border-radius: 3px; border-style: none; border: 1.4px solid black; ")
+
+    def leaveEvent(self,event):
+        self.setStyleSheet("background-color: #39873b; border-radius: 3px; border-style: none; border: 1px solid black;")
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     downloader = main('')
+    downloader.setStyleSheet("QMainWindow{background-color: darkgray;border: 1px solid black}")
     # downloader.setWindowFlags(Qt.CustomizeWindowHint)
     downloader.show()
     sys.exit(app.exec_())
