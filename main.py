@@ -1,5 +1,5 @@
 # pip install pyqt5
-from PyQt5.QtCore import QDir, Qt, QUrl
+from PyQt5.QtCore import QDir, Qt, QUrl, QPoint
 from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
 from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PyQt5.QtWidgets import *
@@ -14,21 +14,30 @@ username = getpass.getuser()
 FILEBROWSER_PATH = os.path.join(os.getenv('WINDIR'), 'explorer.exe')
 fileLoc = 0
 dl_percentage = 0
-class main(QMainWindow):
+class main(QWidget):
     def __init__(self, name):
         super().__init__()
-        
+        self.setFixedSize(width,height)
+        self.setWindowTitle(title + ' ' + version)
+        self.layout  = QVBoxLayout()
+        self.layout.addWidget(MyBar(self))
+        self.setLayout(self.layout)
+        self.layout.setContentsMargins(0,0,0,0)
+        self.layout.addStretch(-1)
+        # self.setMinimumSize(800,400)
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.pressing = False
         # app.setStyle("Windows Vista")
         palette = QPalette()
         palette.setColor(QPalette.Window, QColor(53, 53, 53))
-        palette.setColor(QPalette.WindowText, Qt.white)
+        palette.setColor(QPalette.WindowText, Qt.black)
         palette.setColor(QPalette.Base, QColor(25, 25, 25))
         palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
         palette.setColor(QPalette.ToolTipBase, Qt.white)
         palette.setColor(QPalette.ToolTipText, Qt.white)
-        palette.setColor(QPalette.Text, Qt.white)
+        palette.setColor(QPalette.Text, Qt.black)
         palette.setColor(QPalette.Button, QColor(53, 53, 53))
-        palette.setColor(QPalette.ButtonText, Qt.white)
+        palette.setColor(QPalette.ButtonText, Qt.black)
         palette.setColor(QPalette.BrightText, Qt.red)
         palette.setColor(QPalette.Link, QColor(42, 130, 218))
         palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
@@ -166,10 +175,80 @@ class main(QMainWindow):
             subprocess.run([FILEBROWSER_PATH, path])
         elif os.path.isfile(path):
             subprocess.run([FILEBROWSER_PATH, '/select,', os.path.normpath(path)])
+
+class MyBar(QWidget):
+    def __init__(self, parent):
+        super(MyBar, self).__init__()
+        self.parent = parent
+        self.layout = QHBoxLayout()
+        self.layout.setContentsMargins(0,0,0,0)
+        self.title = QLabel(title + ' ' + version)
+
+        btn_size = 22
+
+        self.btn_close = QPushButton("x")
+        self.btn_close.clicked.connect(self.btn_close_clicked)
+        self.btn_close.setFixedSize(btn_size + 5,btn_size)
+        self.btn_close.setStyleSheet("""background-color: #8b0000; 
+                                        border-radius: 3px; 
+                                        border-style: none; 
+                                        font-weight: bold;""")
+
+        self.btn_min = QPushButton("-")
+        self.btn_min.clicked.connect(self.btn_min_clicked)
+        self.btn_min.setFixedSize(btn_size + 5, btn_size)
+        self.btn_min.setStyleSheet("""background-color: #444444; 
+                                    border-radius: 3px;
+                                    border-style: none; 
+                                    font-weight: bold;""")
+        
+        self.title.setFixedHeight(25)
+        self.title.setAlignment(Qt.AlignCenter)
+        self.layout.addWidget(self.title)
+        self.layout.addWidget(self.btn_min)
+        self.layout.addWidget(self.btn_close)
+
+        self.title.setStyleSheet("""
+            background-color: #222222;
+            color: cyan;
+        """)
+        self.setLayout(self.layout)
+
+        self.start = QPoint(0, 0)
+        self.pressing = False
+
+    def resizeEvent(self, QResizeEvent):
+        super(MyBar, self).resizeEvent(QResizeEvent)
+        self.title.setFixedWidth(self.parent.width())
+
+    def mousePressEvent(self, event):
+        self.start = self.mapToGlobal(event.pos())
+        self.pressing = True
+
+    def mouseMoveEvent(self, event):
+        if self.pressing:
+            self.end = self.mapToGlobal(event.pos())
+            self.movement = self.end-self.start
+            self.parent.setGeometry(self.mapToGlobal(self.movement).x(),
+                                self.mapToGlobal(self.movement).y(),
+                                self.parent.width(),
+                                self.parent.height())
+            self.start = self.end
+
+    def mouseReleaseEvent(self, QMouseEvent):
+        self.pressing = False
+
+
+    def btn_close_clicked(self):
+        self.parent.close()
+
+    def btn_min_clicked(self):
+        self.parent.showMinimized()
+
+
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     downloader = main('')
-    downloader.setFixedSize(width,height)
-    downloader.setWindowTitle(title + ' ' + version)
+    # downloader.setWindowFlags(Qt.CustomizeWindowHint)
     downloader.show()
     sys.exit(app.exec_())
