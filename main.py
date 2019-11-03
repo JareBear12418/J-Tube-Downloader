@@ -66,7 +66,7 @@ class main(QMainWindow):
         self.btn_min.setToolTip('Minimize.')
         self.btn_min.setText('-')
         
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.setWindowFlags(Qt.FramelessWindowHint)
         self.pressing = False
         app.setStyle("Fusion")
         palette = QPalette()
@@ -109,7 +109,7 @@ class main(QMainWindow):
         self.txtURL.setText('Paste your YouTube link here.')
         self.txtURL.setToolTip('Paste your YouTube link here.')
         self.txtURL.setStyleSheet("""
-                                background-color :#292929;
+                                background-color :#202020;
                                 color: #144a85;
                                 border-radius: 3px;
                                 border-style: none; 
@@ -146,7 +146,7 @@ class main(QMainWindow):
                                     """)
         self.progress.setValue(0)
         self.progress.setFormat('')
-        # self.progress.hide()
+        self.progress.hide()
         # PROGRESs BAR END
         
         self.lblState = QLabel(self)
@@ -219,15 +219,16 @@ class main(QMainWindow):
             global file_name
             global file_exten
             global file_id
+            global file_owner
             self.progress.show()
            
             if not os.path.exists(directory):
                 os.makedirs(directory)
                 
             url = self.txtURL.text()
-            # if 'https://www.youtube.com/watch?' not in url:
-            #     buttonReply = QMessageBox.critical(self, 'Error! :(', "{} is an invalid URL".format(url), QMessageBox.Ok, QMessageBox.Ok)
-            #     return
+            if 'youtu' not in url:
+                buttonReply = QMessageBox.critical(self, 'Error! :(', "{} is an invalid URL".format(url), QMessageBox.Ok, QMessageBox.Ok)
+                return
             # if 'https://youtu.be/' not in url:
             #     buttonReply = QMessageBox.critical(self, 'Error! :(', "{} is an invalid URL".format(url), QMessageBox.Ok, QMessageBox.Ok)
             #     return
@@ -260,6 +261,18 @@ class main(QMainWindow):
             video_title = info_dict.get('title', None)
             file_name = video_title
             file_id = video_id
+            req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            webpage = urlopen(req).read()
+            soup = BeautifulSoup(webpage, 'html.parser')
+            html = soup.prettify('utf-8')
+            video_details = {}
+            other_details = {}
+            for span in soup.findAll('span',attrs={'class': 'watch-title'}):
+                video_details['TITLE'] = span.text.strip()
+            for script in soup.findAll('script',attrs={'type': 'application/ld+json'}):
+                channelDescription = json.loads(script.text.strip())
+                video_details['CHANNEL_NAME'] = channelDescription['itemListElement'][0]['item']['name']
+            file_owner = video_details['CHANNEL_NAME']
             try:
                 with youtube_dl.YoutubeDL(ydl_opts) as ydl:
                     self.progress.show()
@@ -267,6 +280,7 @@ class main(QMainWindow):
             except Exception as e:
                 buttonReply = QMessageBox.critical(self, 'Error! :(', "Problem downloading {}\n\nError Log:\n{}".format(url, e), QMessageBox.Ok, QMessageBox.Ok)
                 return
+                self.progress.hide()
                 self.explore(directory)
                 self.lblState.setText('')
                 self.lblTitle.setText('')
@@ -276,12 +290,9 @@ class main(QMainWindow):
             f = os.listdir(os.getcwd())
             t = video_title + '-' + video_id
             for i, j in enumerate(f):
-                # print(j, i)
                 if t in j:
-                    print(j)
                     global fileLoc
                     fileLoc = f[i]
-                    print(fileLoc)
                     
             extension = os.path.splitext(fileLoc)[1]
             file_exten = extension
@@ -300,15 +311,17 @@ class main(QMainWindow):
         except Exception as e:
             buttonReply = QMessageBox.critical(self, 'Error! :(', "{}".format(e), QMessageBox.Ok, QMessageBox.Ok)
             return
+            self.progress.hide()
             self.lblState.setText('')
             self.lblTitle.setText('')
             self.progress.setValue(0)
     @pyqtSlot(int)
     def my_hook(self, d):
-        self.progress.show()
         if d['status'] == 'finished':
             file_tuple = os.path.split(os.path.abspath(d['filename']))
+            print("Done downloading {}".format(file_tuple[1]))
             self.save_history(d['filename'])
+            
         if d['status'] == 'downloading':
             self.lblTitle.setText(d['filename'])
             self.progress.show()
@@ -316,7 +329,7 @@ class main(QMainWindow):
             p = p.replace('%','')
             self.progress.setValue(float(p))
             self.lblState.setText(d['_total_bytes_str'] + ' at ' + d['_speed_str'] + ' ' + d['_eta_str'])
-            # print(d['filename'], d['_percent_str'], d['_eta_str'])
+            print(d['filename'], d['_percent_str'], d['_eta_str'])
             
     def save_history(self, song):
         try:
@@ -513,7 +526,11 @@ class change_file_name(QDialog):
         def modify(self):
             self.update_id3(file_name + '-' + file_id + file_exten, self.txtAlbum.text(), self.txtArtist.text(), self.txtTitle.text())
         def cancel(self):
-            shutil.move(file_name + '-' + file_id + file_exten, directory + '/' + file_name + ' - ' + file_owner + file_exten)
+            try:
+                shutil.move(file_name + '-' + file_id + file_exten, directory + '/' + file_name + ' - ' + file_owner + file_exten)
+            except Exception as e:
+                buttonReply = QMessageBox.critical(self, 'Error! :(', "{}".format(e), QMessageBox.Ok, QMessageBox.Ok)
+                return
             self.close()
             buttonReply = QMessageBox.information(self, 'Success! :)', "Success!\nDo you want to open the file directory?", QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
             if buttonReply == QMessageBox.Yes:
@@ -527,8 +544,11 @@ class change_file_name(QDialog):
             audiofile.tag.album_artist = artist
             audiofile.tag.title = item_title
             audiofile.tag.save()
-            
-            shutil.move(file_name + '-' + file_id + file_exten, directory + '/' + self.txtTitle.text() + ' - ' + self.txtArtist.text() + file_exten)
+            try:
+                shutil.move(file_name + '-' + file_id + file_exten, directory + '/' + self.txtTitle.text() + ' - ' + self.txtArtist.text() + file_exten)
+            except Exception as e:
+                buttonReply = QMessageBox.critical(self, 'Error! :(', "{}".format(e), QMessageBox.Ok, QMessageBox.Ok)
+                return
             self.close()
             buttonReply = QMessageBox.information(self, 'Success! :)', "Success!\nDo you want to open the file directory?", QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
             if buttonReply == QMessageBox.Yes:
