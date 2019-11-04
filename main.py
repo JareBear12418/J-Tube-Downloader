@@ -4,12 +4,15 @@ from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
 from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
-# pip install youtube-dl / imageio / ffmpeg
+# pip install youtube-dl / imageio / ffmpeg / eyed3
 import sys, os, getpass, shutil, subprocess, youtube_dl, ffmpeg, json, webbrowser, urllib, eyed3
 from datetime import datetime
 from urllib.request import Request, urlopen
+# pip install beautifulsoup4
 from bs4 import BeautifulSoup
+# pip install google
 from googlesearch import search
+
 width = 300
 height = 170
 title = ' J-Tube Downloader'
@@ -284,7 +287,7 @@ class main(QMainWindow):
             except Exception as e:
                 buttonReply = QMessageBox.critical(self, 'Error! :(', "Problem downloading/converting {}\n\nError Log:\n{}".format(url, e), QMessageBox.Ok, QMessageBox.Ok)
                 self.progress.hide()
-                self.explore(directory)
+                explore(directory)
                 self.lblState.setText('')
                 self.lblTitle.setText('')
                 self.progress.setValue(0)
@@ -307,7 +310,7 @@ class main(QMainWindow):
                 shutil.move(file_name + '-' + file_id + file_exten, directory + '/' + file_name + ' - ' + file_owner + file_exten)
                 buttonReply = QMessageBox.information(self, 'Success! :)', "Success!\nDo you want to open the file directory?", QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
                 if buttonReply == QMessageBox.Yes:
-                    self.explore(directory)
+                    explore(directory)
             self.lblState.setText('')
             self.lblTitle.setText('')
             self.progress.setValue(0)
@@ -319,7 +322,7 @@ class main(QMainWindow):
             self.lblState.setText('')
             self.lblTitle.setText('')
             self.progress.setValue(0)
-            
+    @pyqtSlot(dict)
     def my_hook(self, d):
         self.progress.show()
         if d['status'] == 'finished':
@@ -334,11 +337,10 @@ class main(QMainWindow):
             p = p.replace('%','')
             self.progress.setValue(float(p))
             if not p == 100:
-                try:
+                if d.get("_total_bytes_str") != None:
                     self.lblState.setText(d['_total_bytes_str'] + ' at ' + d['_speed_str'] + ' ' + d['_eta_str'])
-                except:
-                    self.lblState.setText(d['_total_bytes_estimated_str'] + ' at ' + d['_speed_str'] + ' ' + d['_eta_str'])
-                    print('error')
+                else:
+                    self.lblState.setText(d['_total_bytes_estimate_str'] + ' at ' + d['_speed_str'] + ' ' + d['_eta_str'])
             else:
                 self.lblState.setText('Finishing up...')
                 
@@ -360,14 +362,6 @@ class main(QMainWindow):
         except Exception as e:
             buttonReply = QMessageBox.critical(self, 'Error! :(', "{}".format(e), QMessageBox.Ok, QMessageBox.Ok)
             return
-    def explore(self, path):
-        # explorer would choke on forward slashes
-        path = os.path.normpath(path)
-        if os.path.isdir(path):
-            subprocess.run([FILEBROWSER_PATH, path])
-        elif os.path.isfile(path):
-            subprocess.run([FILEBROWSER_PATH, '/select,', os.path.normpath(path)])
-            
     def search_song(self):
         global file_owner
         # message box input string
@@ -547,7 +541,7 @@ class change_file_name(QDialog):
             self.close()
             buttonReply = QMessageBox.information(self, 'Success! :)', "Success!\nDo you want to open the file directory?", QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
             if buttonReply == QMessageBox.Yes:
-                self.explore(directory)
+                explore(directory)
                 
         def update_id3(self, mp3_file_name, album, artist, item_title):    
             #edit the ID3 tag to add the title, artist, artwork, date, and genre
@@ -565,7 +559,7 @@ class change_file_name(QDialog):
             self.close()
             buttonReply = QMessageBox.information(self, 'Success! :)', "Success!\nDo you want to open the file directory?", QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
             if buttonReply == QMessageBox.Yes:
-                self.explore(directory)
+                explore(directory)
 class HoverButtonExit(QToolButton):
     def __init__(self, parent=None):
         super(HoverButtonExit, self).__init__(parent)
@@ -621,6 +615,14 @@ class LineEdit(QLineEdit):
         super(LineEdit, self).focusOutEvent(e) #required to remove cursor on focusOut
         self.deselect()
         self.readyToEdit = True
+def explore(path):
+    # explorer would choke on forward slashes
+    path = os.path.normpath(path)
+    if os.path.isdir(path):
+        subprocess.run([FILEBROWSER_PATH, path])
+    elif os.path.isfile(path):
+        subprocess.run([FILEBROWSER_PATH, '/select,', os.path.normpath(path)])
+            
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     downloader = main('')
