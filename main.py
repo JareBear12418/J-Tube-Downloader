@@ -320,7 +320,6 @@ class main(QMainWindow):
             self.lblTitle.setText('')
             self.progress.setValue(0)
             
-    @pyqtSlot(float)
     def my_hook(self, d):
         self.progress.show()
         if d['status'] == 'finished':
@@ -339,6 +338,8 @@ class main(QMainWindow):
         
     def save_history(self, song):
         try:
+            import io
+            sys.stdout = io.TextIOWrapper(sys.stdout.detach(), sys.stdout.encoding, 'replace')
             req = Request(self.txtURL.text(), headers={'User-Agent': 'Mozilla/5.0'})
             webpage = urlopen(req).read()
             soup = BeautifulSoup(webpage, 'html.parser')
@@ -348,9 +349,8 @@ class main(QMainWindow):
             for script in soup.findAll('script',attrs={'type': 'application/ld+json'}):
                 channelDescription = json.loads(script.text.strip())
                 video_details['CHANNEL_NAME'] = channelDescription['itemListElement'][0]['item']['name']
-            file = open(directory + '/J-Tube Download History.txt', 'a+')
-            file.write('Downloaded on: ' + str(datetime.now()) + ' Song Name: ' +  song + ' Uploaded by: ' + video_details['CHANNEL_NAME'] + '\n')
-            file.close()
+            with open(directory + '/J-Tube Download History.txt', 'a+', encoding='utf-8') as file:
+                file.write('Downloaded on: ' + str(datetime.now()) + ' Song Name: ' +  song + ' Uploaded by: ' + video_details['CHANNEL_NAME'] + '\n')
         except Exception as e:
             buttonReply = QMessageBox.critical(self, 'Error! :(', "{}".format(e), QMessageBox.Ok, QMessageBox.Ok)
             return
