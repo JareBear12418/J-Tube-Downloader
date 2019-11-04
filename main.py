@@ -227,6 +227,7 @@ class main(QMainWindow):
             global file_exten
             global file_id
             global file_owner
+            global fileLoc
             self.progress.show()
            
             if not os.path.exists(directory):
@@ -296,10 +297,9 @@ class main(QMainWindow):
             # FIXME improve this to make it more readable and cleaner
             f = os.listdir(os.getcwd())
             t = video_title + '-' + video_id
-            for i, j in enumerate(f):
-                if t in j:
-                    global fileLoc
-                    fileLoc = f[i]
+            for filename in f:
+                if t in filename:
+                    fileLoc = filename
                     
             extension = os.path.splitext(fileLoc)[1]
             file_exten = extension
@@ -322,7 +322,7 @@ class main(QMainWindow):
             self.lblState.setText('')
             self.lblTitle.setText('')
             self.progress.setValue(0)
-    @pyqtSlot(dict)
+    # @pyqtSlot(dict)
     def my_hook(self, d):
         self.progress.show()
         if d['status'] == 'finished':
