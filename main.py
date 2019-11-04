@@ -68,7 +68,7 @@ class main(QMainWindow):
         
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.pressing = False
-        # app.setStyle("windowsvista")
+        app.setStyle("Fusion")
         palette = QPalette()
         palette.setColor(QPalette.Window, QColor(35, 35, 35))
         palette.setColor(QPalette.WindowText, Qt.white)
@@ -282,13 +282,13 @@ class main(QMainWindow):
                     self.progress.show()
                     ydl.download([url])
             except Exception as e:
-                buttonReply = QMessageBox.critical(self, 'Error! :(', "Problem downloading {}\n\nError Log:\n{}".format(url, e), QMessageBox.Ok, QMessageBox.Ok)
-                return
+                buttonReply = QMessageBox.critical(self, 'Error! :(', "Problem downloading/converting {}\n\nError Log:\n{}".format(url, e), QMessageBox.Ok, QMessageBox.Ok)
                 self.progress.hide()
                 self.explore(directory)
                 self.lblState.setText('')
                 self.lblTitle.setText('')
                 self.progress.setValue(0)
+                return
             # This code below gets the file that has been downloaded
             # FIXME improve this to make it more readable and cleaner
             f = os.listdir(os.getcwd())
@@ -333,13 +333,19 @@ class main(QMainWindow):
             p = d['_percent_str']
             p = p.replace('%','')
             self.progress.setValue(float(p))
-            self.lblState.setText(d['_total_bytes_str'] + ' at ' + d['_speed_str'] + ' ' + d['_eta_str'])
+            if not p == 100:
+                try:
+                    self.lblState.setText(d['_total_bytes_str'] + ' at ' + d['_speed_str'] + ' ' + d['_eta_str'])
+                except:
+                    self.lblState.setText(d['_total_bytes_estimated_str'] + ' at ' + d['_speed_str'] + ' ' + d['_eta_str'])
+                    print('error')
+            else:
+                self.lblState.setText('Finishing up...')
+                
             print(d['filename'], d['_percent_str'], d['_eta_str'])
         
     def save_history(self, song):
         try:
-            import io
-            sys.stdout = io.TextIOWrapper(sys.stdout.detach(), sys.stdout.encoding, 'replace')
             req = Request(self.txtURL.text(), headers={'User-Agent': 'Mozilla/5.0'})
             webpage = urlopen(req).read()
             soup = BeautifulSoup(webpage, 'html.parser')
