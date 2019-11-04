@@ -30,7 +30,7 @@ class main(QMainWindow):
     def __init__(self, name):
         super().__init__()
         self.setFixedSize(width,height)
-        self.setStyleSheet("QMainWindow{border: 2px solid #121212; border-radius: 1px;}")
+        
         
         self.menuBarTitle = QLabel(self)
         self.menuBarTitle.setText(title + ' ' + version)
@@ -68,7 +68,7 @@ class main(QMainWindow):
         
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.pressing = False
-        app.setStyle("Fusion")
+        # app.setStyle("windowsvista")
         palette = QPalette()
         palette.setColor(QPalette.Window, QColor(35, 35, 35))
         palette.setColor(QPalette.WindowText, Qt.white)
@@ -214,7 +214,11 @@ class main(QMainWindow):
         else:
             self.radAudio.setText('Video')
             self.radAudio.setToolTip('Download Youtube Video as Video.')
+    @pyqtSlot()
     def downloadYoutube(self):
+        self.lblState.setText('downloading...')
+        import time
+        time.sleep(1)
         try:
             global file_name
             global file_exten
@@ -315,8 +319,10 @@ class main(QMainWindow):
             self.lblState.setText('')
             self.lblTitle.setText('')
             self.progress.setValue(0)
-    @pyqtSlot(int)
+            
+    @pyqtSlot(float)
     def my_hook(self, d):
+        self.progress.show()
         if d['status'] == 'finished':
             file_tuple = os.path.split(os.path.abspath(d['filename']))
             print("Done downloading {}".format(file_tuple[1]))
@@ -330,7 +336,7 @@ class main(QMainWindow):
             self.progress.setValue(float(p))
             self.lblState.setText(d['_total_bytes_str'] + ' at ' + d['_speed_str'] + ' ' + d['_eta_str'])
             print(d['filename'], d['_percent_str'], d['_eta_str'])
-            
+        
     def save_history(self, song):
         try:
             req = Request(self.txtURL.text(), headers={'User-Agent': 'Mozilla/5.0'})
@@ -340,8 +346,8 @@ class main(QMainWindow):
             video_details = {}
             other_details = {}
             for script in soup.findAll('script',attrs={'type': 'application/ld+json'}):
-                channelDesctiption = json.loads(script.text.strip())
-                video_details['CHANNEL_NAME'] = channelDesctiption['itemListElement'][0]['item']['name']
+                channelDescription = json.loads(script.text.strip())
+                video_details['CHANNEL_NAME'] = channelDescription['itemListElement'][0]['item']['name']
             file = open(directory + '/J-Tube Download History.txt', 'a+')
             file.write('Downloaded on: ' + str(datetime.now()) + ' Song Name: ' +  song + ' Uploaded by: ' + video_details['CHANNEL_NAME'] + '\n')
             file.close()
@@ -403,6 +409,7 @@ class main(QMainWindow):
 
     def btn_min_clicked(self):
         self.showMinimized()
+        
 class change_file_name(QDialog):
         def __init__(self):
             super().__init__()
@@ -563,7 +570,6 @@ class HoverButtonExit(QToolButton):
 
     def leaveEvent(self,event):
         self.setStyleSheet("color: white; background-color: #8b0000; border-radius: 3px; border-style: none; border: 1px solid black;")
-        
 class HoverButtonModify(QToolButton):
     def __init__(self, parent=None):
         super(HoverButtonModify, self).__init__(parent)
@@ -574,7 +580,6 @@ class HoverButtonModify(QToolButton):
 
     def leaveEvent(self,event):
         self.setStyleSheet("color: white; background-color: #008a11; border-radius: 3px; border-style: none; border: 1px solid black;")
-        
 class HoverButtonMinimize(QToolButton):
     def __init__(self, parent=None):
         super(HoverButtonMinimize, self).__init__(parent)
@@ -585,7 +590,6 @@ class HoverButtonMinimize(QToolButton):
 
     def leaveEvent(self,event):
         self.setStyleSheet("color: white; background-color: #444444; border-radius: 3px; border-style: none; border: 1px solid black;")
-        
 class Button(QToolButton):
     def __init__(self, parent=None):
         super(Button, self).__init__(parent)
@@ -596,7 +600,6 @@ class Button(QToolButton):
 
     def leaveEvent(self,event):
         self.setStyleSheet("color: white; background-color: #144a85; border-radius: 3px; border-style: none; border: 1px solid black;")
-
 class LineEdit(QLineEdit):
     def __init__(self, parent=None):
         super(LineEdit, self).__init__(parent)
@@ -615,5 +618,31 @@ class LineEdit(QLineEdit):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     downloader = main('')
+    # FIXME fix CSS 
+    downloader.setStyleSheet("""QMainWindow
+                            {
+                                border: 2px solid #121212; 
+                                border-radius: 1px;
+                            }
+                            /*QPushButton
+                            {
+                                color: white; 
+                                background-color: #144a85; 
+                                border-radius: 3px; 
+                                border-style: none;
+                                border: 1px solid black;
+                                width: 100%;
+                                font-size: 16px;
+                                height: 30%;
+                            }
+                            QLineEdit
+                            {
+                                background-color :#202020;
+                                color: #144a85;
+                                border-radius: 3px;
+                                border-style: none; 
+                                border: 1px solid darkblue;;
+                            }*/
+                            """)
     downloader.show()
     sys.exit(app.exec_())
