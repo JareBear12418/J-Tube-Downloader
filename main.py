@@ -10,7 +10,7 @@ from datetime import datetime
 from urllib.request import Request, urlopen
 # pip install beautifulsoup4
 from bs4 import BeautifulSoup
-# pip install google
+# pip install google t\
 from googlesearch import search
 
 width = 300

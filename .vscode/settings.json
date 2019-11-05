@@ -4,5 +4,5 @@
         "titleBar.activeBackground": "#014080",
         "titleBar.activeForeground": "#FAFCFF"
     },
-    "python.pythonPath": "C:\\Users\\grossj\\AppData\\Local\\Programs\\Python\\Python37-32\\python.exe"
+    "python.pythonPath": "C:\\Users\\grossj\\AppData\\Local\\Continuum\\anaconda3\\python.exe"
 }
