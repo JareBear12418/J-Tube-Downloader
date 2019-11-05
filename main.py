@@ -623,6 +623,7 @@ def explore(path):
     elif os.path.isfile(path):
         subprocess.run([FILEBROWSER_PATH, '/select,', os.path.normpath(path)])
 # Test
+print('hi')
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     downloader = main('')
