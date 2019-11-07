@@ -1,82 +1,39 @@
 # pip install pyqt5
-from PyQt5.QtCore import QDir, Qt, QUrl, QPoint, pyqtSlot
+from PyQt5.QtCore import QDir, Qt, QUrl, QPoint, pyqtSlot, QRegExp
 from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
 from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
-# pip install youtube-dl / imageio / ffmpeg / eyed3
-import sys, os, getpass, shutil, subprocess, youtube_dl, ffmpeg, json, webbrowser, urllib, eyed3
-from datetime import datetime
-from urllib.request import Request, urlopen
-# pip install beautifulsoup4
-from bs4 import BeautifulSoup
-# pip install google t\
-from googlesearch import search
+from PyQt5 import QtTest
+from PyQt5 import *
+from functools import partial
 
+from cryptography.fernet import Fernet
+import base64
+
+title = '  JPM'
+version = 'v0.1'
 width = 300
-height = 170
-title = ' J-Tube Downloader'
-version = 'v0.3'
-username = getpass.getuser()
-FILEBROWSER_PATH = os.path.join(os.getenv('WINDIR'), 'explorer.exe')
-directory = 'C:/Users/{}/Videos/J-Tube Downloads'.format(username)
-fileLoc = 0
+height = 400
 btn_size = 25
+# pwd_context = CryptContext(
+#         schemes=["pbkdf2_sha256"],
+#         default="pbkdf2_sha256",
+#         pbkdf2_sha256__default_rounds=30000
+# )
+import getpass, tempfile, os, json, re, pyperclip
+username = getpass.getuser()
+password_dir = tempfile.gettempdir() + '/JMP/'
+master_password = ''
 
-
-file_name = None
-file_exten = None
-file_owner = None
-file_id = None
-
-class main(QMainWindow):
-    def __init__(self, name):
+class MainMenu(QMainWindow):
+    def __init__(self):
         super().__init__()
-        self.setFixedSize(width,height)
-        
-        
-        self.menuBarTitle = QLabel(self)
-        self.menuBarTitle.setText(title + ' ' + version)
-        self.menuBarTitle.resize(width - 1, btn_size + 1)
-        self.menuBarTitle.move(1,0)
-        self.menuBarTitle.setFont(QFont('Calibri', 10))
-        self.menuBarTitle.setStyleSheet("""
-                                        background-color: #121212;
-                                        color: #143f85;
-                                        """)
-
-        self.btn_close = HoverButtonExit(self)
-        self.btn_close.clicked.connect(self.btn_close_clicked)
-        self.btn_close.resize(btn_size + 10,btn_size)
-        self.btn_close.setStyleSheet("""background-color: #8b0000;
-                                    border-radius: 3px; 
-                                    border-style: none;
-                                    border: 1px solid black;""")
-        self.btn_close.move(width - (btn_size + 10),0)
-        self.btn_close.setFont(QFont('Calibri', 15))
-        self.btn_close.setToolTip('Close.')
-        self.btn_close.setText('X')
-
-        self.btn_min = HoverButtonMinimize(self)
-        self.btn_min.clicked.connect(self.btn_min_clicked)
-        self.btn_min.resize(btn_size + 10, btn_size)
-        self.btn_min.setStyleSheet("""background-color: #444444;
-                                   border-radius: 3px;
-                                   border-style: none; 
-                                   border: 1px solid black;""")
-        self.btn_min.move(width - (btn_size + btn_size + 20),0)
-        self.btn_min.setFont(QFont('Calibri', 20))
-        self.btn_min.setToolTip('Minimize.')
-        self.btn_min.setText('-')
-        
-        self.setWindowFlags(Qt.FramelessWindowHint)
-        self.pressing = False
-        app.setStyle("Fusion")
         palette = QPalette()
-        palette.setColor(QPalette.Window, QColor(35, 35, 35))
+        palette.setColor(QPalette.Window, QColor(53, 53, 53))
         palette.setColor(QPalette.WindowText, Qt.white)
         palette.setColor(QPalette.Base, QColor(25, 25, 25))
-        palette.setColor(QPalette.AlternateBase, QColor(35, 35, 35))
+        palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
         palette.setColor(QPalette.ToolTipBase, Qt.white)
         palette.setColor(QPalette.ToolTipText, Qt.white)
         palette.setColor(QPalette.Text, Qt.white)
@@ -84,108 +41,233 @@ class main(QMainWindow):
         palette.setColor(QPalette.ButtonText, Qt.white)
         palette.setColor(QPalette.BrightText, Qt.red)
         palette.setColor(QPalette.Link, QColor(42, 130, 218))
-        palette.setColor(QPalette.Highlight, QColor(0, 0,255))
-        palette.setColor(QPalette.HighlightedText, Qt.white)
+        palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+        palette.setColor(QPalette.HighlightedText, Qt.black)
         app.setPalette(palette)
-        
-        self.title = name
-        # RADIO BUTTON START
-        self.radAudio = Button(self)
-        self.radAudio.setCheckable(True)
-        self.radAudio.setText('Audio')
-        self.radAudio.move(30,100)
-        self.radAudio.resize(40,30)
-        self.radAudio.setChecked(True)
-        self.radAudio.setToolTip('Download Youtube Video as Audio.')
-        self.radAudio.toggled.connect(self.radPressed)
-        self.radAudio.setStyleSheet("""
-                                    color: white;
-                                    background-color: #144a85; 
-                                    border-radius: 3px; 
-                                    border-style: none;
-                                    border: 1px solid black;""")
-        # RADIO BUTTON END
-        # TEXT BOX START
-        self.txtURL = LineEdit(self)
-        self.txtURL.move(10,60)
-        self.txtURL.resize(width - 20,30)
-        self.txtURL.setText('Paste your YouTube link here.')
-        self.txtURL.setToolTip('Paste your YouTube link here.')
-        self.txtURL.setStyleSheet("""
-                                background-color :#202020;
-                                color: #144a85;
-                                border-radius: 3px;
-                                border-style: none; 
-                                border: 1px solid darkblue;;
-                                """)
-        # TEXT BOX END
-        # LABEL START
-        self.lblTitle = QLabel(self)
-        self.lblTitle.move(10,30)
-        self.lblTitle.resize(280,20)
-        self.lblTitle.setText("")
-        
-        
-        # self.lblURL = QLabel(self)
-        # self.lblURL.move(10,63)
-        # self.lblURL.resize(30,20)
-        # self.lblURL.setText("URL: ")
-        
-        # PROGRESS BAR START
-        self.progress = QProgressBar(self)
-        self.progress.setGeometry(10, 135, 280, 30)
-        self.progress.setToolTip('Progress bar.')
-        self.progress.setStyleSheet("""
-                                    QProgressBar{
-                                        border: 2px solid darkblue;
-                                        border-radius: 3px;
-                                        text-align: 140
-                                    }
+        self.title = title + ' ' + version
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.width = width
+        self.height = height
+        self.setFixedSize(self.width, self.height)
+        self.setStyleSheet("""QMainWindow{background-color: #151515; border-radius: 3px; border: 1px solid black;}""")
 
-                                    QProgressBar::chunk {
-                                        background-color: blue;
-                                        margin: 1px;
-                                    }
-                                    """)
-        self.progress.setValue(0)
-        self.progress.setFormat('')
-        self.progress.hide()
-        # PROGRESs BAR END
+        # TITLE BAR START
+        self.menuBarTitle = QLabel(self)
+        self.menuBarTitle.setText(self.title)
+        self.menuBarTitle.resize(self.width, btn_size + 1)
+        self.menuBarTitle.move(0,0)
+        self.menuBarTitle.setFont(QFont('Calibri', 10))
+        self.menuBarTitle.setStyleSheet(" background-color: #121212; color: #143f85; border-radius: 3px;  border: 1px solid black; ")
+
+        self.btn_close = ButtonRed(self)
+        self.btn_close.clicked.connect(self.btn_close_clicked)
+        self.btn_close.resize(btn_size + 10,btn_size)
+        self.btn_close.setStyleSheet("background-color: #8b0000; border-radius: 3px;  border-style: none; border: 1px solid black;")
+        self.btn_close.move(self.width - (btn_size + 10),0)
+        self.btn_close.setFont(QFont('Calibri', 15))
+        self.btn_close.setToolTip('Close.')
+        self.btn_close.setText('X')
+
+        self.btn_min = ButtonGray(self)
+        self.btn_min.clicked.connect(self.btn_min_clicked)
+        self.btn_min.resize(btn_size + 10, btn_size)
+        self.btn_min.setStyleSheet("background-color: #444444; border-radius: 3px; border-style: none; border: 1px solid black;")
+        self.btn_min.move(self.width - (btn_size + btn_size + 20),0)
+        self.btn_min.setFont(QFont('Calibri', 20))
+        self.btn_min.setToolTip('Minimize.')
+        self.btn_min.setText('-')
         
-        self.lblState = QLabel(self)
-        self.lblState.move(20,135)
-        self.lblState.resize(280, 30)
-        self.lblState.setText("")
-        # LABEL END
-        # BUTTON START
-        self.btnDownload = Button(self)
-        self.btnDownload.setText('Download')
-        self.btnDownload.move(70,100)
-        self.btnDownload.resize(80,30)
-        self.btnDownload.clicked.connect(self.downloadYoutube)
-        self.btnDownload.setFont(QFont('Calibri', 10))
-        self.btnDownload.setToolTip('Download the current YouTube URL Video.')
-        self.btnDownload.setStyleSheet("""background-color: #144a85; 
-                                       border-radius: 3px; 
-                                       border-style: none;
-                                       border: 1px solid black;""")
+        self.txtSearch = LineEdit(self)
+        self.txtSearch.move(7, 30)
+        self.txtSearch.resize(self.width - (7 * 2), 30)
+        self.txtSearch.setStyleSheet("background-color :#202020;color: #144a85;border-radius: 3px;border-style: none; border: 1px solid darkblue;")
+        # self.txtSearch.textChanged.connect(self.verify_text)
+        passwords = ['password', 'abc123', 'dragon', 'test', 'test2', 'test', 'test2','password', 'abc123', 'dragon', 'test', 'test2', 'test', 'test2']
+        site_names = ['google', 'microsoft', 'facebook', 'test', 'test2', 'test', 'test2','google', 'microsoft', 'facebook', 'test', 'test2', 'test', 'test2']
+
+        scroll = QScrollArea(self)
+        scroll.move(7, 70)
+        scroll.resize(self.width - (7 * 2), 320)
+        scroll.setWidgetResizable(True)
+        self.content = QWidget()
+        scroll.setWidget(self.content)
+        lay = QGridLayout(self.content)
+        # lay.setColumnStretch(0, 1)
+        x = 10
+        y = 0
+
+        self.lblName = QLabel(self)
+        self.lblName.setText('Website:')
+        self.lblName.setAlignment(Qt.AlignLeft)
+        self.lblName.setFont(QFont('Calibri', 11))
+        lay.addWidget((self.lblName), y, 0)
+        self.lblPassword = QLabel(self)
+        self.lblPassword.setText('Passwords:')
+        self.lblPassword.setAlignment(Qt.AlignLeft)
+        self.lblPassword.setFont(QFont('Calibri', 11))
+        lay.addWidget((self.lblPassword), y, 1)
+        for i, j in enumerate(passwords):
+            y += 1
+            self.lblWebsiteName = QLabel(self)
+            self.lblWebsiteName.setText(site_names[i])
+            self.lblWebsiteName.setAlignment(Qt.AlignRight | Qt.AlignCenter)
+            self.lblWebsiteName.setFont(QFont('Calibri', 11))
+            lay.addWidget((self.lblWebsiteName), y, 0)
+            self.btnPassword = QPushButton(self)
+            self.btnPassword.setFont(QFont('Calibri', 14))
+            self.btnPassword.setFlat(True)
+            self.btnPassword.setToolTip('Copy {} to Clipboard'.format(j))
+            self.btnPassword.setText(j)
+            text = partial(self.copy_password, self.btnPassword.text())
+            self.btnPassword.clicked.connect(text)
+            lay.addWidget((self.btnPassword), y, 1)
+        self.layout().addWidget(scroll)
+        scroll.setStyleSheet("QScrollArea{background-color: #131313; border-radius: 3px;border-style: none; border: 1px solid black;}")
+        # lay.setStyleSheet("QGridLayout{border-radius: 3px;border-style: none; border: 1px solid darkblue;}")
+
+
+        # self.update()
+
+    # def paintEvent(self, event):
+    #     q = QPainter(self)
+    #     q.begin(self)
+    #     q.setRenderHint(QPainter.Antialiasing)
+    #     q.setPen(QtCore.Qt.black)
+    #     q.setBrush(QtCore.Qt.white)
+    #     q.drawLine(self.width / 2, 70, self.width/ 2, 320)
+    #     q.end()
+    def copy_password(self,b):
+        pyperclip.copy(b)
+        # self.create_master_password()
+        # lOGIN ITEMS END
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Return:
+            # self.login()
+            print('pressed')
+
+    # MOVE WINDOW START
+    #center
+    def center(self):
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+        # BUTTON END
+    def mousePressEvent(self, event):
+        self.oldPos = event.globalPos()
+
+    def mouseMoveEvent(self, event):
+        try:
+            delta = QPoint (event.globalPos() - self.oldPos)
+            #print(delta)
+            self.move(self.x() + delta.x(), self.y() + delta.y())
+            self.oldPos = event.globalPos()
+        except AttributeError:
+            print('oh no')
+    # MOVE WINDOW END
+    
+    def btn_close_clicked(self):
+        self.close()
+
+    def btn_min_clicked(self):
+        self.showMinimized()
+
+class Login(QDialog):
+    def __init__(self, parent=None):
+        super(Login, self).__init__(parent)
+        self.title = title + ' ' + version
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.setStyleSheet("""QDialog{background-color: #151515; border-radius: 3px; border: 1px solid black;}""")
+        self.width = width / 1.5
+        self.height = height / 2.5
+        self.setFixedSize(self.width, self.height)
+
+        # TITLE BAR START
+        self.menuBarTitle = QLabel(self)
+        self.menuBarTitle.setText(self.title + ' - Login')
+        self.menuBarTitle.resize(self.width, btn_size + 1)
+        self.menuBarTitle.move(0,0)
+        self.menuBarTitle.setFont(QFont('Calibri', 10))
+        self.menuBarTitle.setStyleSheet(" background-color: #121212; color: #143f85; border-radius: 3px;  border: 1px solid black; ")
+
+        self.btn_close = ButtonRed(self)
+        self.btn_close.clicked.connect(self.btn_close_clicked)
+        self.btn_close.resize(btn_size + 10,btn_size)
+        self.btn_close.setStyleSheet("background-color: #8b0000; border-radius: 3px;  border-style: none; border: 1px solid black;")
+        self.btn_close.move(self.width - (btn_size + 10),0)
+        self.btn_close.setFont(QFont('Calibri', 15))
+        self.btn_close.setToolTip('Close.')
+        self.btn_close.setText('X')
+
+        self.btn_min = ButtonGray(self)
+        self.btn_min.clicked.connect(self.btn_min_clicked)
+        self.btn_min.resize(btn_size + 10, btn_size)
+        self.btn_min.setStyleSheet("background-color: #444444; border-radius: 3px; border-style: none; border: 1px solid black;")
+        self.btn_min.move(self.width - (btn_size + btn_size + 20),0)
+        self.btn_min.setFont(QFont('Calibri', 20))
+        self.btn_min.setToolTip('Minimize.')
+        self.btn_min.setText('-')
+        # TITLE BAR END
+        self.lblInfo = QLabel(self)
+        self.lblInfo.setText('Password:')
+        self.lblInfo.move(7, 60)
+        # self.lblInfo.resize(self.width - (7 * 2), 50)
+        # LOGIN ITEMS START
+        self.btnLogin = ButtonGreen(self)
+        self.btnLogin.setText('Login')
+        self.btnLogin.move(7,self.height/1.3)
+        self.btnLogin.resize(self.width - (7 * 2), 30)
+        self.btnLogin.setStyleSheet("color: white; background-color: #008a11; border-radius: 3px; border-style: none; border: 1px solid black;")
+        self.btnLogin.setToolTip('Login to account.')
+        self.btnLogin.setFont(QFont('Calibri', 12))
+        self.btnLogin.clicked.connect(self.login)
         
-        self.btnSearch = Button(self)
-        self.btnSearch.setText('Search YouTube')
-        self.btnSearch.move(150,100)
-        self.btnSearch.resize(120,30)
-        self.btnSearch.clicked.connect(self.search_song)
-        self.btnSearch.setFont(QFont('Calibri', 10))
-        self.btnSearch.setToolTip('Search YouTube for a video.')
-        self.btnSearch.setStyleSheet("""background-color: #144a85; 
-                                       border-radius: 3px; 
-                                       border-style: none;
-                                       border: 1px solid black;""")
+        self.txtPassword = LineEdit(self)
+        self.txtPassword.setEchoMode(QLineEdit.Password)
+        # self.txtPassword.setText('Password')
+        self.txtPassword.setToolTip('Your Password')
+        self.txtPassword.move(7, self.height / 2)
+        self.txtPassword.resize(self.width - (7 * 2), 30)
+        self.txtPassword.setStyleSheet("background-color :#202020;color: #144a85;border-radius: 3px;border-style: none; border: 1px solid darkblue;")
+        self.txtPassword.textChanged.connect(self.verify_text)
+        self.get_password()
+        # lOGIN ITEMS END
         
-        
-        self.center()
-        self.oldPos = self.pos()
-        # self.file_name()
+    def verify_text(self):
+        x = list(self.txtPassword.text())
+        if len(x) > 0:
+            self.txtPassword.setStyleSheet("background-color :#202020;color: #144a85;border-radius: 3px;border-style: none; border: 1px solid darkblue;")
+            
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Return:
+            self.login()
+            
+    def login(self):
+        temp = self.txtPassword.text()
+        key = load_key()
+        f = Fernet(key)
+        # master_password = master_password.decode('utf-8')
+        decrypted_encrypted = f.decrypt(master_password)
+        temp_master = base64.urlsafe_b64decode(decrypted_encrypted)
+        temp_master = temp_master.decode('utf-8')
+
+        if temp == temp_master:
+            self.txtPassword.setStyleSheet("background-color :#202020;color: #008a11;border-radius: 3px;border-style: none; border: 1px solid darkgreen;")
+            QtTest.QTest.qWait(1000)
+            self.main = MainMenu()
+            self.main.setWindowTitle('Main')
+            self.main.setFixedSize(width, height)
+            self.main.setWindowFlags(Qt.FramelessWindowHint)
+            self.main.show()
+            self.close()
+        else:
+            self.txtPassword.setStyleSheet("background-color :#202020;color: #8b0000;border-radius: 3px;border-style: none; border: 1px solid darkred;")
+            
+    def get_password(self):
+        file = open(password_dir + "master.key", "rb")
+        global master_password
+        master_password = file.read()
+        file.close()
     # MOVE WINDOW START
     #center
     def center(self):
@@ -203,366 +285,258 @@ class main(QMainWindow):
         self.move(self.x() + delta.x(), self.y() + delta.y())
         self.oldPos = event.globalPos()
     # MOVE WINDOW END
-    def file_name(self):
-        # self.close()
-        self.file_change = change_file_name()
-        self.file_change.setFixedSize(215, 190)
-        self.file_change.setWindowTitle('File Name')
-        self.file_change.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
-        self.file_change.show()
-    def radPressed(self):
-        if self.radAudio.isChecked():
-            self.radAudio.setText('Audio')
-            self.radAudio.setToolTip('Download Youtube Video as Audio.')
-        else:
-            self.radAudio.setText('Video')
-            self.radAudio.setToolTip('Download Youtube Video as Video.')
-    @pyqtSlot()
-    def downloadYoutube(self):
-        self.lblState.setText('downloading...')
-        import time
-        time.sleep(1)
-        try:
-            global file_name
-            global file_exten
-            global file_id
-            global file_owner
-            global fileLoc
-            self.progress.show()
-           
-            if not os.path.exists(directory):
-                os.makedirs(directory)
-                
-            url = self.txtURL.text()
-            if 'youtu' not in url:
-                buttonReply = QMessageBox.critical(self, 'Error! :(', "{} is an invalid URL".format(url), QMessageBox.Ok, QMessageBox.Ok)
-                return
-            # if 'https://youtu.be/' not in url:
-            #     buttonReply = QMessageBox.critical(self, 'Error! :(', "{} is an invalid URL".format(url), QMessageBox.Ok, QMessageBox.Ok)
-            #     return
-            if self.radAudio.isChecked() == True:
-                ydl_opts = {
-                    'format': 'bestaudio/best',
-                    'postprocessors': [{
-                        'key': 'FFmpegExtractAudio',
-                        'preferredcodec': 'mp3',
-                        'preferredquality': '192',
-                    }],
-                    'postprocessor_args': [
-                        '-ar', '16000'
-                    ],
-                    'prefer_ffmpeg': True,
-                    'keepvideo': False,
-                    'progress_hooks': [self.my_hook],
-                    'noplaylist': True,
-                    # 'outtmpl': directory
-                }
-            else:
-                ydl_opts = {
-                    'format': 'best',
-                    'noplaylist': True,
-                    'progress_hooks': [self.my_hook]
-                    # 'outtmpl': directory
-                }
-            info_dict = youtube_dl.YoutubeDL(ydl_opts).extract_info(url, download = False)
-            video_id = info_dict.get("id", None)
-            video_title = info_dict.get('title', None)
-            file_name = video_title
-            file_id = video_id
-            req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-            webpage = urlopen(req).read()
-            soup = BeautifulSoup(webpage, 'html.parser')
-            html = soup.prettify('utf-8')
-            video_details = {}
-            other_details = {}
-            for span in soup.findAll('span',attrs={'class': 'watch-title'}):
-                video_details['TITLE'] = span.text.strip()
-            for script in soup.findAll('script',attrs={'type': 'application/ld+json'}):
-                channelDescription = json.loads(script.text.strip())
-                video_details['CHANNEL_NAME'] = channelDescription['itemListElement'][0]['item']['name']
-            file_owner = video_details['CHANNEL_NAME']
-            try:
-                with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-                    self.progress.show()
-                    ydl.download([url])
-            except Exception as e:
-                buttonReply = QMessageBox.critical(self, 'Error! :(', "Problem downloading/converting {}\n\nError Log:\n{}".format(url, e), QMessageBox.Ok, QMessageBox.Ok)
-                self.progress.hide()
-                explore(directory)
-                self.lblState.setText('')
-                self.lblTitle.setText('')
-                self.progress.setValue(0)
-                return
-            # This code below gets the file that has been downloaded
-            # FIXME improve this to make it more readable and cleaner
-            f = os.listdir(os.getcwd())
-            t = video_title + '-' + video_id
-            for filename in f:
-                if t in filename:
-                    fileLoc = filename
-                    
-            extension = os.path.splitext(fileLoc)[1]
-            file_exten = extension
-            self.lblState.setText('Finished!')
-            if self.radAudio.isChecked() == True:
-                self.file_name()
-            else:
-                shutil.move(file_name + '-' + file_id + file_exten, directory + '/' + file_name + ' - ' + file_owner + file_exten)
-                buttonReply = QMessageBox.information(self, 'Success! :)', "Success!\nDo you want to open the file directory?", QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
-                if buttonReply == QMessageBox.Yes:
-                    explore(directory)
-            self.lblState.setText('')
-            self.lblTitle.setText('')
-            self.progress.setValue(0)
-            self.progress.hide()
-        except Exception as e:
-            buttonReply = QMessageBox.critical(self, 'Error! :(', "{}".format(e), QMessageBox.Ok, QMessageBox.Ok)
-            return
-            self.progress.hide()
-            self.lblState.setText('')
-            self.lblTitle.setText('')
-            self.progress.setValue(0)
-    # @pyqtSlot(dict)
-    def my_hook(self, d):
-        self.progress.show()
-        if d['status'] == 'finished':
-            file_tuple = os.path.split(os.path.abspath(d['filename']))
-            print("Done downloading {}".format(file_tuple[1]))
-            self.save_history(d['filename'])
-            
-        if d['status'] == 'downloading':
-            self.lblTitle.setText(d['filename'])
-            self.progress.show()
-            p = d['_percent_str']
-            p = p.replace('%','')
-            self.progress.setValue(float(p))
-            if not p == 100:
-                if d.get("_total_bytes_str") != None:
-                    self.lblState.setText(d['_total_bytes_str'] + ' at ' + d['_speed_str'] + ' ' + d['_eta_str'])
-                else:
-                    self.lblState.setText(d['_total_bytes_estimate_str'] + ' at ' + d['_speed_str'] + ' ' + d['_eta_str'])
-            else:
-                self.lblState.setText('Finishing up...')
-                
-            print(d['filename'], d['_percent_str'], d['_eta_str'])
-        
-    def save_history(self, song):
-        try:
-            req = Request(self.txtURL.text(), headers={'User-Agent': 'Mozilla/5.0'})
-            webpage = urlopen(req).read()
-            soup = BeautifulSoup(webpage, 'html.parser')
-            html = soup.prettify('utf-8')
-            video_details = {}
-            other_details = {}
-            for script in soup.findAll('script',attrs={'type': 'application/ld+json'}):
-                channelDescription = json.loads(script.text.strip())
-                video_details['CHANNEL_NAME'] = channelDescription['itemListElement'][0]['item']['name']
-            with open(directory + '/J-Tube Download History.txt', 'a+', encoding='utf-8') as file:
-                file.write('Downloaded on: ' + str(datetime.now()) + ' Song Name: ' +  song + ' Uploaded by: ' + video_details['CHANNEL_NAME'] + '\n')
-        except Exception as e:
-            buttonReply = QMessageBox.critical(self, 'Error! :(', "{}".format(e), QMessageBox.Ok, QMessageBox.Ok)
-            return
-    def search_song(self):
-        global file_owner
-        # message box input string
-        text, okPressed = QInputDialog.getText(self, " ","Video name:", QLineEdit.Normal, "")
-        if okPressed and text != '':
-            # url = 'youtube '
-            url = 'https://www.youtube.com/watch?v='
-            query = url + text
-            try:
-                for url in search(query, tld='com', lang='en', num=10, start=0, stop=None, pause=2):
-                    print(url)
-                    if 'watch' in url:
-                        req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-                        webpage = urlopen(req).read()
-                        soup = BeautifulSoup(webpage, 'html.parser')
-                        html = soup.prettify('utf-8')
-                        video_details = {}
-                        other_details = {}
-                        for span in soup.findAll('span',attrs={'class': 'watch-title'}):
-                            video_details['TITLE'] = span.text.strip()
-                        for script in soup.findAll('script',attrs={'type': 'application/ld+json'}):
-                            channelDescription = json.loads(script.text.strip())
-                            video_details['CHANNEL_NAME'] = channelDescription['itemListElement'][0]['item']['name']
-                        # try:
-                        file_owner = video_details['CHANNEL_NAME']
-                        # except KeyError:
-                        #     buttonReply = QMessageBox.critical(self, 'Error! :(', "Oh no! There seems too be somthing wrong\nwith your internet connection.\nTry again later.", QMessageBox.Ok, QMessageBox.Ok)
-                        #     return
-                        urlLink=" <a href=\"{}\">{} </a>\n".format(url, url)
-                        self.setStyleSheet("QMessageBox{border: 2px solid #121212; border-radius: 1px;}")
-                        buttonReply = QMessageBox.information(self, 'Result', "URL: {}\nVideo Name: {}\nUploaded by: {}\n\nIs this the video/song you want to download?".format(url, video_details['TITLE'], video_details['CHANNEL_NAME']), QMessageBox.Yes | QMessageBox.Retry | QMessageBox.Cancel, QMessageBox.Yes)
-                        if buttonReply == QMessageBox.Yes:
-                            self.txtURL.setText(url)
-                            return
-                        if buttonReply == QMessageBox.Cancel:
-                            return
-                    else:
-                        continue
-            except Exception as e:
-                buttonReply = QMessageBox.critical(self, 'Error! :(', "{}".format(e), QMessageBox.Ok, QMessageBox.Ok)
-                return
-        
+    
     def btn_close_clicked(self):
         self.close()
 
     def btn_min_clicked(self):
         self.showMinimized()
-        
-class change_file_name(QDialog):
-        def __init__(self):
-            super().__init__()
-            self.setStyleSheet("QDialog{border: 2px solid #121212; border-radius: 1px;}")
-            self.menuBarTitle = QLabel(self)
-            self.menuBarTitle.setText(" Modify file tags")
-            self.menuBarTitle.resize(width - 1, btn_size + 1)
-            self.menuBarTitle.setFont(QFont('Calibri', 10))
-            self.menuBarTitle.setStyleSheet("""
-                                            background-color: #121212;
-                                            color: #143f85;""")
-            self.setFixedSize(width,height)
-            
-            self.lblTitle = QLabel(self)
-            self.lblTitle.setText('Title:')
-            self.lblTitle.move(5,30)
-            self.lblTitle.setFont(QFont('Calibri', 16))
-            
-            self.lblArtist = QLabel(self)
-            self.lblArtist.setText('Artist:')
-            self.lblArtist.move(5,70)
-            self.lblArtist.setFont(QFont('Calibri', 16))
-            
-            self.lblAlbum = QLabel(self)
-            self.lblAlbum.setText('Album:')
-            self.lblAlbum.move(5,110)
-            self.lblAlbum.setFont(QFont('Calibri', 16))
-            
-            self.txtTitle = LineEdit(self)
-            self.txtTitle.setText(file_name)
-            self.txtTitle.move(80,30)
-            self.txtTitle.resize(130,40)
-            self.txtTitle.setAlignment(Qt.AlignCenter)
-            self.txtTitle.setFont(QFont('Calibri', 10))
-            self.txtTitle.setToolTip('The name of the Song')
-            self.txtTitle.setStyleSheet("""
-                                        background-color :#292929;
-                                        color: #144a85;
-                                        border-radius: 3px;
-                                        border-style: none; 
-                                        border: 1px solid darkblue;
-                                        """)
-            
-            self.txtArtist = LineEdit(self)
-            self.txtArtist.setText(file_owner)
-            self.txtArtist.move(80,70)
-            self.txtArtist.resize(130,40)
-            self.txtArtist.setAlignment(Qt.AlignCenter)
-            self.txtArtist.setFont(QFont('Calibri', 10))
-            self.txtArtist.setToolTip('The name of the Artist')
-            self.txtArtist.setStyleSheet("""
-                                        background-color :#292929;
-                                        color: #144a85;
-                                        border-radius: 3px;
-                                        border-style: none; 
-                                        border: 1px solid darkblue;;
-                                        """)
-            
-            self.txtAlbum = LineEdit(self)
-            self.txtAlbum.setText('')
-            self.txtAlbum.move(80,110)
-            self.txtAlbum.resize(130,40)
-            self.txtAlbum.setAlignment(Qt.AlignCenter)
-            self.txtAlbum.setFont(QFont('Calibri', 10))
-            self.txtAlbum.setToolTip('The name of the album')
-            self.txtAlbum.setStyleSheet("""
-                                        background-color :#292929;
-                                        color: #144a85;
-                                        border-radius: 3px;
-                                        border-style: none; 
-                                        border: 1px solid darkblue;;
-                                        """)
-            
-            self.btnYes = HoverButtonModify(self)
-            self.btnYes.setText('Modify')
-            self.btnYes.move(1,160 - 1)
-            self.btnYes.resize(215/2,30)
-            self.btnYes.clicked.connect(self.modify)
-            self.btnYes.setFont(QFont('Calibri', 10))
-            self.btnYes.setToolTip('Modify file tags.')
-            self.btnYes.setStyleSheet("""
-                                      background-color: #008a11; 
-                                      border-radius: 3px; 
-                                      border-style: none;
-                                      border: 1px solid black;
-                                      """)
-            
-            self.btnNo = HoverButtonExit(self)
-            self.btnNo.setText('Cancel')
-            self.btnNo.move(215/2,160 - 1)
-            self.btnNo.resize(215/2,30)
-            self.btnNo.clicked.connect(self.cancel)
-            self.btnNo.setFont(QFont('Calibri', 10))
-            self.btnNo.setToolTip('Do not modify file tags.')
-            self.btnNo.setStyleSheet("""
-                                     background-color: #8b0000; 
-                                     border-radius: 3px; 
-                                     border-style: none;
-                                     border: 1px solid black;
-                                     """)
-            self.center()
-            self.oldPos = self.pos()
-            
-    # MOVE WINDOW START
-        #center
-        def center(self):
-            qr = self.frameGeometry()
-            cp = QDesktopWidget().availableGeometry().center()
-            qr.moveCenter(cp)
-            self.move(qr.topLeft())
-            # BUTTON END
-        def mousePressEvent(self, event):
-            self.oldPos = event.globalPos()
 
-        def mouseMoveEvent(self, event):
-            delta = QPoint (event.globalPos() - self.oldPos)
-            #print(delta)
-            self.move(self.x() + delta.x(), self.y() + delta.y())
-            self.oldPos = event.globalPos()
+
+
+
+class MsgBox(QDialog):
+    def __init__(self, message, msgtitle, parent=None):
+        super(MsgBox, self).__init__(parent)
+        self.title = msgtitle
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.width = width / 2
+        self.height = height / 4.5
+        self.setFixedSize(self.width, self.height)
+
+        self.setStyleSheet("""QDialog{background-color: #151515; border-radius: 3px; border: 1px solid black;}""")
+        # TITLE BAR START
+        self.menuBarTitle = QLabel(self)
+        self.menuBarTitle.setText('  ' + self.title)
+        self.menuBarTitle.resize(self.width, btn_size + 1)
+        self.menuBarTitle.move(0,0)
+        self.menuBarTitle.setFont(QFont('Calibri', 10))
+        self.menuBarTitle.setStyleSheet(" background-color: #121212; color: #143f85; border-radius: 3px;  border: 1px solid black; ")
+
+        self.btn_close = ButtonRed(self)
+        self.btn_close.clicked.connect(self.btn_proceed)
+        self.btn_close.resize(btn_size + 10,btn_size)
+        self.btn_close.setStyleSheet("background-color: #8b0000; border-radius: 3px;  border-style: none; border: 1px solid black;")
+        self.btn_close.move(self.width - (btn_size + 10),0)
+        self.btn_close.setFont(QFont('Calibri', 15))
+        self.btn_close.setToolTip('Close.')
+        self.btn_close.setText('X')
+
+        self.btn_min = ButtonGray(self)
+        self.btn_min.clicked.connect(self.btn_min_clicked)
+        self.btn_min.resize(btn_size + 10, btn_size)
+        self.btn_min.setStyleSheet("background-color: #444444; border-radius: 3px; border-style: none; border: 1px solid black;")
+        self.btn_min.move(self.width - (btn_size + btn_size + 20),0)
+        self.btn_min.setFont(QFont('Calibri', 20))
+        self.btn_min.setToolTip('Minimize.')
+        self.btn_min.setText('-')
+        
+
+        self.lblMessage = QLabel(self)
+        self.lblMessage.setText(message)
+        self.lblMessage.move(7, 30)
+        
+        self.btnOk = ButtonGreen(self)
+        self.btnOk.setText('Ok')
+        self.btnOk.clicked.connect(self.btn_proceed)
+        self.btnOk.resize(btn_size + 20,btn_size)
+        self.btnOk.setStyleSheet("color: white; background-color: #008a11; border-radius: 3px; border-style: none; border: 1px solid black;")
+        self.btnOk.move(100,  60)
+    
+    def btn_proceed(self):
+        self.login_popup = Login()
+        self.login_popup.setFixedSize(width / 1.5, height / 2.5)
+        self.login_popup.setWindowTitle('Login')
+        self.login_popup.setWindowFlags(Qt.FramelessWindowHint)
+        self.login_popup.show()
+        self.close()
+    def btn_min_clicked(self):
+        self.showMinimized()
+    # MOVE WINDOW START
+    #center
+    def center(self):
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+        # BUTTON END
+    def mousePressEvent(self, event):
+        self.oldPos = event.globalPos()
+
+    def mouseMoveEvent(self, event):
+        delta = QPoint (event.globalPos() - self.oldPos)
+        #print(delta)
+        self.move(self.x() + delta.x(), self.y() + delta.y())
+        self.oldPos = event.globalPos()
     # MOVE WINDOW END
-        def modify(self):
-            self.update_id3(file_name + '-' + file_id + file_exten, self.txtAlbum.text(), self.txtArtist.text(), self.txtTitle.text())
-        def cancel(self):
-            try:
-                shutil.move(file_name + '-' + file_id + file_exten, directory + '/' + file_name + ' - ' + file_owner + file_exten)
-            except Exception as e:
-                buttonReply = QMessageBox.critical(self, 'Error! :(', "{}".format(e), QMessageBox.Ok, QMessageBox.Ok)
-                return
-            self.close()
-            buttonReply = QMessageBox.information(self, 'Success! :)', "Success!\nDo you want to open the file directory?", QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
-            if buttonReply == QMessageBox.Yes:
-                explore(directory)
-                
-        def update_id3(self, mp3_file_name, album, artist, item_title):    
-            #edit the ID3 tag to add the title, artist, artwork, date, and genre
-            audiofile = eyed3.load(mp3_file_name)
-            audiofile.tag.artist = artist
-            audiofile.tag.album = album
-            audiofile.tag.album_artist = artist
-            audiofile.tag.title = item_title
-            audiofile.tag.save()
-            try:
-                shutil.move(file_name + '-' + file_id + file_exten, directory + '/' + self.txtTitle.text() + ' - ' + self.txtArtist.text() + file_exten)
-            except Exception as e:
-                buttonReply = QMessageBox.critical(self, 'Error! :(', "{}".format(e), QMessageBox.Ok, QMessageBox.Ok)
-                return
-            self.close()
-            buttonReply = QMessageBox.information(self, 'Success! :)', "Success!\nDo you want to open the file directory?", QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
-            if buttonReply == QMessageBox.Yes:
-                explore(directory)
-class HoverButtonExit(QToolButton):
+class create_password(QDialog):
     def __init__(self, parent=None):
-        super(HoverButtonExit, self).__init__(parent)
+        super(create_password, self).__init__(parent)
+        self.check_if_file_exists()
+        self.title = title + ' ' + version
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.width = width / 1.5
+        self.height = height / 2.5
+        self.setFixedSize(self.width, self.height)
+
+        self.setStyleSheet("""QDialog{background-color: #151515; border-radius: 3px; border: 1px solid black;}""")
+        # TITLE BAR START
+        self.menuBarTitle = QLabel(self)
+        self.menuBarTitle.setText('  Create a Password')
+        self.menuBarTitle.resize(self.width, btn_size + 1)
+        self.menuBarTitle.move(0,0)
+        self.menuBarTitle.setFont(QFont('Calibri', 8))
+        self.menuBarTitle.setStyleSheet(" background-color: #121212; color: #143f85; border-radius: 3px;  border: 1px solid black; ")
+
+        self.btn_close = ButtonRed(self)
+        self.btn_close.clicked.connect(self.btn_close_clicked)
+        self.btn_close.resize(btn_size + 10,btn_size)
+        self.btn_close.setStyleSheet("background-color: #8b0000; border-radius: 3px;  border-style: none; border: 1px solid black;")
+        self.btn_close.move(self.width - (btn_size + 10),0)
+        self.btn_close.setFont(QFont('Calibri', 15))
+        self.btn_close.setToolTip('Close.')
+        self.btn_close.setText('X')
+
+        self.btn_min = ButtonGray(self)
+        self.btn_min.clicked.connect(self.btn_min_clicked)
+        self.btn_min.resize(btn_size + 10, btn_size)
+        self.btn_min.setStyleSheet("background-color: #444444; border-radius: 3px; border-style: none; border: 1px solid black;")
+        self.btn_min.move(self.width - (btn_size + btn_size + 20),0)
+        self.btn_min.setFont(QFont('Calibri', 20))
+        self.btn_min.setToolTip('Minimize.')
+        self.btn_min.setText('-')
+        # TITLE BAR END
+        # self.lblInfo = QLabel(self)
+        # self.lblInfo.setText('Create a Password')
+        # self.lblInfo.move(7, 30)
+        # self.lblInfo.resize(self.width - (7 * 2), 50)
+        # LOGIN ITEMS START
+        self.btnCreatePassword = ButtonGreen(self)
+        self.btnCreatePassword.setText('Create')
+        self.btnCreatePassword.move(7,self.height/1.3)
+        self.btnCreatePassword.resize(self.width - (7 * 2), 30)
+        self.btnCreatePassword.setStyleSheet("color: white; background-color: #008a11; border-radius: 3px; border-style: none; border: 1px solid black;")
+        self.btnCreatePassword.setToolTip('Create Password.')
+        self.btnCreatePassword.setFont(QFont('Calibri', 12))
+        self.btnCreatePassword.clicked.connect(self.create_master_password)
+        
+        rx = QRegExp('[A-Za-z0-9@#$%^&+=]{8,}')
+        validator = QRegExpValidator(rx, self)
+        
+        self.txtPassword = LineEdit(self)
+        # self.txtPassword.setValidator(validator)
+        self.txtPassword.setEchoMode(QLineEdit.Password)
+        self.txtPassword.setToolTip('Create a Password')
+        self.txtPassword.move(7, self.height / 3)
+        self.txtPassword.resize(self.width - (7 * 2), 30)
+        self.txtPassword.setStyleSheet("background-color :#202020;color: #8b0000;border-radius: 3px;border-style: none; border: 1px solid darkred;")
+        self.txtPassword.textChanged.connect(self.verify_text)
+        
+        self.txtPasswordConfirm = LineEdit(self)
+        self.txtPasswordConfirm.setEchoMode(QLineEdit.Password)
+        self.txtPasswordConfirm.setToolTip('Confirm Your Password')
+        self.txtPasswordConfirm.move(7, self.height / 1.8)
+        self.txtPasswordConfirm.resize(self.width - (7 * 2), 30)
+        self.txtPasswordConfirm.setStyleSheet("background-color :#202020;color: #8b0000;border-radius: 3px;border-style: none; border: 1px solid darkred;")
+        self.txtPasswordConfirm.textChanged.connect(self.verify_text)
+        self.verify_text()
+        # self.create_master_password()
+        # lOGIN ITEMS END
+        
+    def verify_text(self):
+        x = list(self.txtPassword.text())
+        y = list(self.txtPasswordConfirm.text())
+        # if not re.match(r'[A-Za-z0-9@#$%^&+=]{8,}', self.txtPassword.text()):
+
+        if len(x) < 8:
+            self.menuBarTitle.setText('  Create a Password')
+            self.btnCreatePassword.setEnabled(False)
+            self.btnCreatePassword.setStyleSheet("color: white; background-color: #444444; border-radius: 3px; border-style: none; border: 1px solid black;")
+            self.txtPassword.setStyleSheet("background-color :#202020;color: #8b0000;border-radius: 3px;border-style: none; border: 1px solid darkred;")
+            self.txtPasswordConfirm.setStyleSheet("background-color :#202020;color: #8b0000;border-radius: 3px;border-style: none; border: 1px solid darkred;")
+        elif len(x) >= 8:
+            self.txtPassword.setStyleSheet("background-color :#202020;color: #008a11;border-radius: 3px;border-style: none; border: 1px solid darkgreen;")
+            self.menuBarTitle.setText('  Confirm Password')
+            if self.txtPasswordConfirm.text() == self.txtPassword.text():
+                self.menuBarTitle.setText('  Save Password')
+                self.btnCreatePassword.setEnabled(True)
+                self.btnCreatePassword.setStyleSheet("color: white; background-color: #008a11; border-radius: 3px; border-style: none; border: 1px solid black;")
+                self.txtPasswordConfirm.setStyleSheet("background-color :#202020;color: #008a11;border-radius: 3px;border-style: none; border: 1px solid darkgreen;")
+            else:
+                if len(y) >= 1:
+                    self.menuBarTitle.setText('  Password Doesn\'t Match')
+                self.btnCreatePassword.setStyleSheet("color: white; background-color: #444444; border-radius: 3px; border-style: none; border: 1px solid black;")
+                self.btnCreatePassword.setEnabled(False)
+                self.txtPasswordConfirm.setStyleSheet("background-color :#202020;color: #8b0000;border-radius: 3px;border-style: none; border: 1px solid darkred;")
+
+    def keyPressEvent(self, event):
+        x = list(self.txtPassword.text())
+        y = list(self.txtPasswordConfirm.text())
+        if event.key() == Qt.Key_Return:
+            if len(x) >= 8 and len(y) >= 1 and  self.txtPasswordConfirm.text() == self.txtPassword.text() and self.btnCreatePassword.isEnabled():
+                self.create_master_password()
+                
+    def create_master_password(self):
+        global master_password
+        if self.txtPasswordConfirm.text() == self.txtPassword.text():
+            text = self.txtPasswordConfirm.text()
+            text = text.encode('utf-8')
+            new_pass = base64.urlsafe_b64encode(text)
+            write_key()
+            key = load_key()
+            f = Fernet(key)
+            encrypted = f.encrypt(new_pass)
+            file = open(password_dir + "master.key", "wb")
+            file.write(encrypted)
+            file.close()
+            file = open(password_dir + "master.key", "rb")
+            master_password = file.read()
+            file.close()
+            # buttonReply = QMessageBox.information(self, 'Notice', "Password Saved!\nDo not forget this password!", QMessageBox.Ok, QMessageBox.Ok)
+            self.m = MsgBox('Password Saved!\nDo not forget this password!', 'Notice!')
+            self.m.show()
+            
+            self.close()
+        
+    def check_if_file_exists(self):
+        if not os.path.exists(password_dir):
+            os.makedirs(password_dir)
+            
+        if not os.path.exists(password_dir + 'key.key'):
+            file = open(password_dir + "key.key", "wb")
+            file.write('')
+            file.close()
+        else:
+            file = open(password_dir + "key.key", "rb")
+            global master_password
+            master_password = file.read()
+            file.close()
+    # MOVE WINDOW START
+    #center
+    def center(self):
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+        # BUTTON END
+    def mousePressEvent(self, event):
+        self.oldPos = event.globalPos()
+
+    def mouseMoveEvent(self, event):
+        delta = QPoint (event.globalPos() - self.oldPos)
+        #print(delta)
+        self.move(self.x() + delta.x(), self.y() + delta.y())
+        self.oldPos = event.globalPos()
+    # MOVE WINDOW END
+    
+    def btn_close_clicked(self):
+        self.close()
+
+    def btn_min_clicked(self):
+        self.showMinimized()
+class ButtonRed(QToolButton):
+    def __init__(self, parent=None):
+        super(ButtonRed, self).__init__(parent)
         self.setMouseTracking(True)
 
     def enterEvent(self,event):
@@ -570,19 +544,25 @@ class HoverButtonExit(QToolButton):
 
     def leaveEvent(self,event):
         self.setStyleSheet("color: white; background-color: #8b0000; border-radius: 3px; border-style: none; border: 1px solid black;")
-class HoverButtonModify(QToolButton):
+class ButtonGreen(QToolButton):
     def __init__(self, parent=None):
-        super(HoverButtonModify, self).__init__(parent)
+        super(ButtonGreen, self).__init__(parent)
         self.setMouseTracking(True)
 
     def enterEvent(self,event):
-        self.setStyleSheet("color: white; background-color: #109f00; border-radius: 3px; border-style: none;  font-weight: bold;  border: 1.4px solid black;")
-
+        if self.isEnabled():
+            self.setStyleSheet("color: white; background-color: #109f00; border-radius: 3px; border-style: none;  font-weight: bold;  border: 1.4px solid black;")
+        else:
+            self.setStyleSheet("color: white; background-color: #444444; border-radius: 3px; border-style: none; border: 1px solid black;")
+            
     def leaveEvent(self,event):
-        self.setStyleSheet("color: white; background-color: #008a11; border-radius: 3px; border-style: none; border: 1px solid black;")
-class HoverButtonMinimize(QToolButton):
+        if self.isEnabled():
+            self.setStyleSheet("color: white; background-color: #008a11; border-radius: 3px; border-style: none; border: 1px solid black;")
+        else:
+            self.setStyleSheet("color: white; background-color: #444444; border-radius: 3px; border-style: none; border: 1px solid black;")
+class ButtonGray(QToolButton):
     def __init__(self, parent=None):
-        super(HoverButtonMinimize, self).__init__(parent)
+        super(ButtonGray, self).__init__(parent)
         self.setMouseTracking(True)
 
     def enterEvent(self,event):
@@ -590,9 +570,9 @@ class HoverButtonMinimize(QToolButton):
 
     def leaveEvent(self,event):
         self.setStyleSheet("color: white; background-color: #444444; border-radius: 3px; border-style: none; border: 1px solid black;")
-class Button(QToolButton):
+class ButtonBlue(QToolButton):
     def __init__(self, parent=None):
-        super(Button, self).__init__(parent)
+        super(ButtonBlue, self).__init__(parent)
         self.setMouseTracking(True)
 
     def enterEvent(self,event):
@@ -615,43 +595,55 @@ class LineEdit(QLineEdit):
         super(LineEdit, self).focusOutEvent(e) #required to remove cursor on focusOut
         self.deselect()
         self.readyToEdit = True
-def explore(path):
-    # explorer would choke on forward slashes
-    path = os.path.normpath(path)
-    if os.path.isdir(path):
-        subprocess.run([FILEBROWSER_PATH, path])
-    elif os.path.isfile(path):
-        subprocess.run([FILEBROWSER_PATH, '/select,', os.path.normpath(path)])
-# Test
-print('hi')
+
+def write_key():
+    key = Fernet.generate_key()
+    with open(password_dir +"key.key", "wb") as key_file:
+        key_file.write(key)
+def load_key():
+    return open(password_dir + "key.key", "rb").read()
+    
+    
 if __name__ == '__main__':
+    import sys
     app = QApplication(sys.argv)
-    downloader = main('')
-    # FIXME fix CSS 
-    downloader.setStyleSheet("""QMainWindow
-                            {
-                                border: 2px solid #121212; 
-                                border-radius: 1px;
-                            }
-                            /*QPushButton
-                            {
-                                color: white; 
-                                background-color: #144a85; 
-                                border-radius: 3px; 
-                                border-style: none;
-                                border: 1px solid black;
-                                width: 100%;
-                                font-size: 16px;
-                                height: 30%;
-                            }
-                            QLineEdit
-                            {
-                                background-color :#202020;
-                                color: #144a85;
-                                border-radius: 3px;
-                                border-style: none; 
-                                border: 1px solid darkblue;;
-                            }*/
-                            """)
-    downloader.show()
+    m = MainMenu()
+    m.show()
+    # if not os.path.exists(password_dir):
+    #         os.makedirs(password_dir)
+
+    # if not os.path.exists(password_dir + 'key.key'):
+    #     file = open(password_dir + "key.key", "w")
+    #     file.write('')
+    #     file.close()
+    #     create_pass_popup = create_password()
+    #     create_pass_popup.setFixedSize(width / 1.5, height / 2.5)
+    #     create_pass_popup.setWindowTitle('Create Password')
+    #     create_pass_popup.setWindowFlags(Qt.FramelessWindowHint)
+    #     create_pass_popup.show()
+    # else:
+    #     if os.stat(password_dir + 'key.key').st_size != 0:
+    #         login = Login()
+    #         login.setWindowTitle('Login')
+    #         login.show()
+    #     else:
+    #         create_pass_popup = create_password()
+    #         create_pass_popup.setFixedSize(width / 1.5, height / 2.5)
+    #         create_pass_popup.setWindowTitle('Create Password')
+    #         create_pass_popup.setWindowFlags(Qt.FramelessWindowHint)
+    #         create_pass_popup.show()
+
+    # if not os.path.exists(password_dir + 'master.key'):
+    #     file = open(password_dir + "master.key", "w")
+    #     file.write('')
+    #     file.close()
+    #     create_pass_popup = create_password()
+    #     create_pass_popup.setFixedSize(width / 1.5, height / 2.5)
+    #     create_pass_popup.setWindowTitle('Create Password')
+    #     create_pass_popup.setWindowFlags(Qt.FramelessWindowHint)
+    #     create_pass_popup.show()
+    # else:
+    #     file = open(password_dir + "master.key", "rb")
+    #     master_password = file.read()
+    #     file.close()
     sys.exit(app.exec_())
