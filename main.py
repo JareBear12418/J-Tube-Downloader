@@ -203,7 +203,7 @@ class main(QMainWindow):
         self.move(self.x() + delta.x(), self.y() + delta.y())
         self.oldPos = event.globalPos()
     # MOVE WINDOW END
-    def file_name(self):
+    def file_name1(self):
         # self.close()
         self.file_change = change_file_name()
         self.file_change.setFixedSize(215, 190)
@@ -284,8 +284,8 @@ class main(QMainWindow):
             for script in soup.findAll('script',attrs={'type': 'application/ld+json'}):
                 channelDescription = json.loads(script.text.strip())
                 video_details['CHANNEL_NAME'] = channelDescription['itemListElement'][0]['item']['name']
-            file_owner = video_details['CHANNEL_NAME']
             try:
+                file_owner = video_details['CHANNEL_NAME']
                 with youtube_dl.YoutubeDL(ydl_opts) as ydl:
                     self.progress.show()
                     ydl.download([url])
@@ -309,12 +309,17 @@ class main(QMainWindow):
             file_exten = extension
             self.lblState.setText('Finished!')
             if self.radAudio.isChecked() == True:
-                self.file_name()
+                print(os.path.dirname(os.path.realpath(__file__)) + '/' + file_name + '-' + file_id + file_exten, directory + '/' + file_name + ' - ' + file_owner + file_exten)
+                import threading
+                threading.Thread(target=self.file_name1).start()
             else:
-                shutil.move(file_name + '-' + file_id + file_exten, directory + '/' + file_name + ' - ' + file_owner + file_exten)
+                print(os.path.dirname(os.path.realpath(__file__)) + '/' + file_name + '-' + file_id + file_exten, directory + '/' + file_name + ' - ' + file_owner + file_exten)
+                shutil.move(os.path.dirname(os.path.realpath(__file__)) + '/' + file_name + '-' + file_id + file_exten, directory + '/' + file_name + ' - ' + file_owner + file_exten)
                 buttonReply = QMessageBox.information(self, 'Success! :)', "Success!\nDo you want to open the file directory?", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
                 if buttonReply == QMessageBox.Yes:
-                    explore(directory)
+                    import threading
+                    threading.Thread(target=explore, args=directory).start()
+                    # explore(directory)
             self.lblState.setText('')
             self.lblTitle.setText('')
             self.progress.setValue(0)
@@ -535,10 +540,10 @@ class change_file_name(QDialog):
             self.oldPos = event.globalPos()
     # MOVE WINDOW END
         def modify(self):
-            self.update_id3(file_name + '-' + file_id + file_exten, self.txtAlbum.text(), self.txtArtist.text(), self.txtTitle.text())
+            self.update_id3(os.path.dirname(os.path.realpath(__file__)) + '/' + file_name + '-' + file_id + file_exten, self.txtAlbum.text(), self.txtArtist.text(), self.txtTitle.text())
         def cancel(self):
             try:
-                shutil.move(file_name + '-' + file_id + file_exten, directory + '/' + file_name + ' - ' + file_owner + file_exten)
+                shutil.move(os.path.dirname(os.path.realpath(__file__)) + '/' + file_name + '-' + file_id + file_exten, directory + '/' + file_name + ' - ' + file_owner + file_exten)
             except Exception as e:
                 buttonReply = QMessageBox.critical(self, 'Error! :(', "{}".format(e), QMessageBox.Ok, QMessageBox.Ok)
                 return
