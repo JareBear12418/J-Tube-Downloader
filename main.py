@@ -30,11 +30,9 @@ file_owner = None
 file_id = None
 
 class main(QMainWindow):
-    def __init__(self, name):
+    def __init__(self):
         super().__init__()
         self.setFixedSize(width,height)
-        
-        
         self.menuBarTitle = QLabel(self)
         self.menuBarTitle.setText(title + ' ' + version)
         self.menuBarTitle.resize(width - 1, btn_size + 1)
@@ -88,7 +86,7 @@ class main(QMainWindow):
         palette.setColor(QPalette.HighlightedText, Qt.white)
         app.setPalette(palette)
         
-        self.title = name
+        self.windowTitle = title
         # RADIO BUTTON START
         self.radAudio = Button(self)
         self.radAudio.setCheckable(True)
@@ -196,20 +194,22 @@ class main(QMainWindow):
         # BUTTON END
     def mousePressEvent(self, event):
         self.oldPos = event.globalPos()
-
     def mouseMoveEvent(self, event):
         delta = QPoint (event.globalPos() - self.oldPos)
         #print(delta)
         self.move(self.x() + delta.x(), self.y() + delta.y())
         self.oldPos = event.globalPos()
     # MOVE WINDOW END
-    def file_name1(self):
+    def show_file_name(self):
         # self.close()
-        self.file_change = change_file_name()
-        self.file_change.setFixedSize(215, 190)
-        self.file_change.setWindowTitle('File Name')
-        self.file_change.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
-        self.file_change.show()
+        
+        # import threading
+        # threading.Thread(target=change_file_name).start()
+        self.cfn = change_file_name()
+        self.cfn.setFixedSize(215, 190)
+        self.cfn.setWindowTitle('File Name')
+        self.cfn.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.cfn.show()
     def radPressed(self):
         if self.radAudio.isChecked():
             self.radAudio.setText('Audio')
@@ -218,14 +218,14 @@ class main(QMainWindow):
             self.radAudio.setText('Video')
             self.radAudio.setToolTip('Download Youtube Video as Video.')
     def downloadYoutube(self):
-        import threading
-        threading.Thread(target=self.StartDownloadYoutubeThread).start()
+        # import threading
+        # threading.Thread(target=self.StartDownloadYoutubeThread).start()
+        self.StartDownloadYoutubeThread()
     @pyqtSlot()
     def StartDownloadYoutubeThread(self):
         print('starting')
         self.lblState.setText('downloading...')
         import time
-        time.sleep(1)
         try:
             global file_name
             global file_exten
@@ -292,7 +292,6 @@ class main(QMainWindow):
             except Exception as e:
                 buttonReply = QMessageBox.critical(self, 'Error! :(', "Problem downloading/converting {}\n\nError Log:\n{}".format(url, e), QMessageBox.Ok, QMessageBox.Ok)
                 self.progress.hide()
-                explore(directory)
                 self.lblState.setText('')
                 self.lblTitle.setText('')
                 self.progress.setValue(0)
@@ -304,34 +303,31 @@ class main(QMainWindow):
             for filename in f:
                 if t in filename:
                     fileLoc = filename
-                    
-            extension = os.path.splitext(fileLoc)[1]
-            file_exten = extension
+            file_exten = os.path.splitext(fileLoc)[1]
             self.lblState.setText('Finished!')
             if self.radAudio.isChecked() == True:
                 print(os.path.dirname(os.path.realpath(__file__)) + '/' + file_name + '-' + file_id + file_exten, directory + '/' + file_name + ' - ' + file_owner + file_exten)
-                import threading
-                threading.Thread(target=self.file_name1).start()
+                # import threading
+                # threading.Thread(target=self.file_name1).start()
+                self.show_file_name()
             else:
                 print(os.path.dirname(os.path.realpath(__file__)) + '/' + file_name + '-' + file_id + file_exten, directory + '/' + file_name + ' - ' + file_owner + file_exten)
                 shutil.move(os.path.dirname(os.path.realpath(__file__)) + '/' + file_name + '-' + file_id + file_exten, directory + '/' + file_name + ' - ' + file_owner + file_exten)
                 buttonReply = QMessageBox.information(self, 'Success! :)', "Success!\nDo you want to open the file directory?", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
                 if buttonReply == QMessageBox.Yes:
-                    import threading
-                    threading.Thread(target=explore, args=directory).start()
-                    # explore(directory)
+                    explore(directory)
             self.lblState.setText('')
             self.lblTitle.setText('')
             self.progress.setValue(0)
             self.progress.hide()
         except Exception as e:
             buttonReply = QMessageBox.critical(self, 'Error! :(', "{}".format(e), QMessageBox.Ok, QMessageBox.Ok)
-            return
             self.progress.hide()
             self.lblState.setText('')
             self.lblTitle.setText('')
             self.progress.setValue(0)
-    # @pyqtSlot(dict)
+            return
+    @pyqtSlot()
     def my_hook(self, d):
         self.progress.show()
         if d['status'] == 'finished':
@@ -354,7 +350,6 @@ class main(QMainWindow):
                 self.lblState.setText('Finishing up...')
                 
             print(d['filename'], d['_percent_str'], d['_eta_str'])
-        
     def save_history(self, song):
         try:
             req = Request(self.txtURL.text(), headers={'User-Agent': 'Mozilla/5.0'})
@@ -412,14 +407,11 @@ class main(QMainWindow):
             except Exception as e:
                 buttonReply = QMessageBox.critical(self, 'Error! :(', "{}".format(e), QMessageBox.Ok, QMessageBox.Ok)
                 return
-        
     def btn_close_clicked(self):
         self.close()
-
     def btn_min_clicked(self):
         self.showMinimized()
-        
-class change_file_name(QDialog):
+class change_file_name(QWidget):
         def __init__(self):
             super().__init__()
             self.setStyleSheet("QDialog{border: 2px solid #121212; border-radius: 1px;}")
@@ -521,7 +513,6 @@ class change_file_name(QDialog):
                                      """)
             self.center()
             self.oldPos = self.pos()
-            
     # MOVE WINDOW START
         #center
         def center(self):
@@ -532,7 +523,6 @@ class change_file_name(QDialog):
             # BUTTON END
         def mousePressEvent(self, event):
             self.oldPos = event.globalPos()
-
         def mouseMoveEvent(self, event):
             delta = QPoint (event.globalPos() - self.oldPos)
             #print(delta)
@@ -551,7 +541,6 @@ class change_file_name(QDialog):
             buttonReply = QMessageBox.information(self, 'Success! :)', "Success!\nDo you want to open the file directory?", QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
             if buttonReply == QMessageBox.Yes:
                 explore(directory)
-                
         def update_id3(self, mp3_file_name, album, artist, item_title):    
             #edit the ID3 tag to add the title, artist, artwork, date, and genre
             audiofile = eyed3.load(mp3_file_name)
@@ -634,7 +623,7 @@ def explore(path):
 # test
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    downloader = main('')
+    downloader = main()
     # FIXME fix CSS 
     downloader.setStyleSheet("""QMainWindow
                             {
