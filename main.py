@@ -16,7 +16,7 @@ from googlesearch import search
 width = 300
 height = 170
 title = ' J-Tube Downloader'
-version = 'v0.3'
+version = 'v0.4'
 username = getpass.getuser()
 FILEBROWSER_PATH = os.path.join(os.getenv('WINDIR'), 'explorer.exe')
 directory = 'C:/Users/{}/Videos/J-Tube Downloads'.format(username)
@@ -217,8 +217,12 @@ class main(QMainWindow):
         else:
             self.radAudio.setText('Video')
             self.radAudio.setToolTip('Download Youtube Video as Video.')
-    @pyqtSlot()
     def downloadYoutube(self):
+        import threading
+        threading.Thread(target=self.StartDownloadYoutubeThread).start()
+    @pyqtSlot()
+    def StartDownloadYoutubeThread(self):
+        print('starting')
         self.lblState.setText('downloading...')
         import time
         time.sleep(1)
@@ -308,7 +312,7 @@ class main(QMainWindow):
                 self.file_name()
             else:
                 shutil.move(file_name + '-' + file_id + file_exten, directory + '/' + file_name + ' - ' + file_owner + file_exten)
-                buttonReply = QMessageBox.information(self, 'Success! :)', "Success!\nDo you want to open the file directory?", QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+                buttonReply = QMessageBox.information(self, 'Success! :)', "Success!\nDo you want to open the file directory?", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
                 if buttonReply == QMessageBox.Yes:
                     explore(directory)
             self.lblState.setText('')
